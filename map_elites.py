@@ -3,7 +3,7 @@
 #| Copyright 2019, INRIA
 #| Main contributor(s):
 #| Jean-Baptiste Mouret, jean-baptiste.mouret@inria.fr
-#| Eloïse Dalin , eloise.dalin@inria.fr
+#| Eloise Dalin , eloise.dalin@inria.fr
 #| Pierre Desreumaux , pierre.desreumaux@inria.fr
 #|
 #|
