@@ -51,17 +51,28 @@ zero_count = 0
 
 default_params = \
     {
+        # more of this -> higher-quality CVT
         "cvt_samples": 25000,
+        # we evaluate in batches to paralleliez
         "batch_size": 100,
-        "random_init": 1000,
+        # proportion of niches to be filled before starting
+        "random_init": 0.1,
+        # batch for random initialization
         "random_init_batch": 100,
+        # parameters of the "mutation" operator
         "sigma_iso": 0.01,
+        # parameters of the "cross-over" operator
         "sigma_line": 0.2,
+        # when to write results (one generation = one batch)
         "dump_period": 100,
+        # do we use several cores?
         "parallel": True,
+        # do we cache the result of CVT and reuse?
         "cvt_use_cache": True,
+        # min/max of parameters
         "min": [0,0,-1,0,0,0],
-        "max": [0.1,10,0,1,1,1,1]
+        "max": [0.1,10,0,1,1,1,1],
+        "multi_task": False
     }
 class Species:
     def __init__(self, x, desc, fitness):
@@ -75,10 +86,8 @@ def scale(x,params):
         x_scaled.append(x[i] * (params["max"][i] - params["min"][i]) + params["min"][i])
     return np.array(x_scaled)
 
-def variation(x, archive, params):
+def variation(x, z, archive, params):
     y = x.copy()
-    keys = list(archive.keys())
-    z = archive[keys[np.random.randint(len(keys))]].x
     for i in range(0,len(y)):
         # iso mutation
         a = np.random.normal(0, (params["max"][i]-params["min"][i])/300.0, 1)
@@ -157,12 +166,19 @@ def __add_to_archive(s, archive, kdt):
             archive[n] = s
     else:
         archive[n] = s
+
+
 # evaluate a single vector (x) with a function f and return a species
 # t = vector, function
 def evaluate(t):
-    z, f = t  # evaluate z with function f
-    fit, desc = f(z)
-    return Species(z, desc, fit)
+    # x,y (parents) only useful in multi-task
+    z, f, x, params = t 
+    if params['multi_task']:
+        f1, desc = f(z, x.desc)
+        return Species(z, x.desc, fit)
+    else:
+        fit, desc = f(z)
+        return Species(z, desc, fit)
 
 # map-elites algorithm (CVT variant)
 def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params):
@@ -183,7 +199,7 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
     for g in range(0, n_gen + 1):
         to_evaluate = []
         if g == 0:  # random initialization
-            while(init_count<=params['random_init']):
+            while(init_count<=params['random_init'] * n_niches):
                 for i in range(0, params['random_init_batch']):
                     x = np.random.random(dim_x)
                     x = scale(x, params)
@@ -192,7 +208,7 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
                         elem_bounded = min(x[i],params["max"][i])
                         elem_bounded = max(elem_bounded,params["min"][i])
                         x_bounded.append(elem_bounded)
-                    to_evaluate += [(np.array(x_bounded), f)]
+                    to_evaluate += [(np.array(x_bounded), f, 2* [-np.ones(dim_map)], params)]
                 if params['parallel'] == True:
                     s_list = pool.map(evaluate, to_evaluate)
                 else:
@@ -206,9 +222,12 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
             for n in range(0, params['batch_size']):
                 # parent selection
                 x = archive[keys[np.random.randint(len(keys))]]
+                y = archive[keys[np.random.randint(len(keys))]]
                 # copy & add variation
-                z = variation(x.x, archive, params)
-                to_evaluate += [(z, f)]
+                z = variation(x.x, y.x, archive, params)
+                to_evaluate += [(z, f, x, params)]
+                if params['multi_task']:
+                    to_evaluate += [(z, f, y, params)]
             # parallel evaluation of the fitness
             if params['parallel'] == True:
                 s_list = pool.map(evaluate, to_evaluate)
@@ -223,7 +242,6 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
             __save_archive(archive, g)
         __save_archive(archive, n_gen)
     return archive
-
 
 
 # a small test
