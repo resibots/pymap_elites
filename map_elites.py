@@ -42,6 +42,8 @@ import math
 import numpy as np
 import multiprocessing
 from pathlib import Path
+import kinematic_arm
+import sys
 
 global same_count
 same_count = 0
@@ -64,21 +66,23 @@ default_params = \
         # parameters of the "cross-over" operator
         "sigma_line": 0.2,
         # when to write results (one generation = one batch)
-        "dump_period": 100,
+        "dump_period": 10000,
         # do we use several cores?
         "parallel": True,
         # do we cache the result of CVT and reuse?
         "cvt_use_cache": True,
         # min/max of parameters
-        "min": [0,0,-1,0,0,0],
-        "max": [0.1,10,0,1,1,1,1],
-        "multi_task": False
+        "min": [0,0,0,0,0,0],
+        "max": [1,1,1,1,1,1,1],
+        "multi_task": False,
+        "multi_mode": 'full'
     }
 class Species:
     def __init__(self, x, desc, fitness):
         self.x = x
         self.desc = desc
         self.fitness = fitness
+        self.centroid = None
 
 def scale(x,params):
     x_scaled = []
@@ -137,8 +141,8 @@ def __make_hashable(array):
     return tuple(map(float, array))
 
 
-# format: centroid fitness desc x \n
-# centroid, desc and x are vectors
+# format: fitness, centroid, desc, genome \n
+# fitness, centroid, desc and x are vectors
 def __save_archive(archive, gen):
     def write_array(a, f):
         for i in a:
@@ -147,6 +151,7 @@ def __save_archive(archive, gen):
     with open(filename, 'w') as f:
         for k in archive.values():
             f.write(str(k.fitness) + ' ')
+            write_array(k.centroid, f)
             write_array(k.desc, f)
             write_array(k.x, f)
             f.write("\n")
@@ -158,6 +163,7 @@ def __add_to_archive(s, archive, kdt):
     niche_index = kdt.query([s.desc], k=1)[1][0][0]
     niche = kdt.data[niche_index]
     n = __make_hashable(niche)
+    s.centroid = n
     if(np.all(s.desc==0)):
         zero_count = zero_count + 1
     if n in archive:
@@ -168,20 +174,24 @@ def __add_to_archive(s, archive, kdt):
         archive[n] = s
 
 
-# evaluate a single vector (x) with a function f and return a species
+# evaluate a single vector (z) with a function f and return a species
 # t = vector, function
 def evaluate(t):
-    # x,y (parents) only useful in multi-task
+    # x (position) only useful in multi-task
     z, f, x, params = t 
     if params['multi_task']:
-        f1, desc = f(z, x.desc)
-        return Species(z, x.desc, fit)
+        fit, desc = f(z, x)
+        return Species(z, x, fit)
     else:
         fit, desc = f(z)
         return Species(z, desc, fit)
 
 # map-elites algorithm (CVT variant)
-def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params):
+def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=default_params):
+    print(params)
+    assert(f != None)
+    assert(dim_map != -1)
+    assert(dim_x != -1)
     num_cores = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(num_cores)
 
@@ -196,9 +206,11 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
 
     init_count = 0
     # main loop
-    for g in range(0, n_gen + 1):
+    evals = 0
+    b_evals = 0
+    while (evals < num_evals):
         to_evaluate = []
-        if g == 0:  # random initialization
+        if evals == 0:  # random initialization
             while(init_count<=params['random_init'] * n_niches):
                 for i in range(0, params['random_init_batch']):
                     x = np.random.random(dim_x)
@@ -208,11 +220,16 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
                         elem_bounded = min(x[i],params["max"][i])
                         elem_bounded = max(elem_bounded,params["min"][i])
                         x_bounded.append(elem_bounded)
-                    to_evaluate += [(np.array(x_bounded), f, 2* [-np.ones(dim_map)], params)]
+                    # random niche for multitask only (ignored otherwise)
+                    rand_niche = np.random.random(dim_map)
+                    # put in the pool to be evaluated
+                    to_evaluate += [(np.array(x_bounded), f, rand_niche, params)]
                 if params['parallel'] == True:
                     s_list = pool.map(evaluate, to_evaluate)
                 else:
                     s_list = map(evaluate, to_evaluate)
+                evals += len(to_evaluate)
+                b_evals += len(to_evaluate)
                 for s in s_list:
                     __add_to_archive(s, archive, kdt)
                 init_count = len(archive)
@@ -225,22 +242,45 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
                 y = archive[keys[np.random.randint(len(keys))]]
                 # copy & add variation
                 z = variation(x.x, y.x, archive, params)
-                to_evaluate += [(z, f, x, params)]
-                if params['multi_task']:
-                    to_evaluate += [(z, f, y, params)]
+                if not params['multi_task']:
+                    to_evaluate += [(z, f, x, params)]
+                else:
+                    # to_evaluate += multi_task_eval(c, archive, params)
+                    # now decide where to evaluate
+                    # randomly on the map (e.g. 10% niches)?
+                    # in the neighborhood (fixed) with 10% niches?
+                    # in the neighborhood (adaptive?)
+                    # according to the distance between the parents (in behavioral space?)?
+                    # in the neighborhood while expanding providing that it works?
+                    # evaluate everywhere
+                    if params['multi_mode'] == 'full':
+                        for n in c: # for each centroid
+                            to_evaluate += [(z, f, n, params)]
+                    elif params['multi_mode'] == 'parents':
+                        to_evaluate += [(z, f, x.desc, params)]
+                        to_evaluate += [(z, f, y.desc, params)]
+                    elif params['multi_mode'] == 'random':
+                        niche = np.random.random(dim_map)
+                        to_evaluate += [(z, f, niche, params)]
+                    # assum smoothness : take the less 'smooth' point (lower that its average neighbors)
+                    # same thing on genotypes? look around and check the 'outlier'
             # parallel evaluation of the fitness
             if params['parallel'] == True:
                 s_list = pool.map(evaluate, to_evaluate)
             else:
                 s_list = map(evaluate, to_evaluate)
+            evals += len(to_evaluate)
+            b_evals += len(to_evaluate)
             # natural selection
             for s in s_list:
                 __add_to_archive(s, archive, kdt)
         # write archive
-        if g % params['dump_period'] == 0 and params['dump_period'] != -1:
-            print("generation:", g)
-            __save_archive(archive, g)
-        __save_archive(archive, n_gen)
+        print("b_evals:", b_evals)
+        if params['dump_period'] != -1 and b_evals > params['dump_period']:
+            print("Evals:", evals)
+            __save_archive(archive, evals)
+            b_evals = 0
+    __save_archive(archive, evals)
     return archive
 
 
@@ -252,5 +292,16 @@ if __name__ == "__main__":
         for i in range(0, x.shape[0]):
             f += x[i] * x[i] - 10 * math.cos(2 * math.pi * x[i])
         return -f, np.array([xx[0], xx[1]])
-
-    archive = compute(2, 6, rastrigin, n_niches=5000, n_gen=2500)
+    def arm(angles, lengths):
+        assert(angles.shape == lengths.shape)
+        target = 0.5 * np.ones(2)
+        a = kinematic_arm.Arm(lengths)
+        ef, _ = a.fw_kinematics(angles * math.pi)
+        f = -np.linalg.norm(ef - target)
+        return f, lengths
+    # dim_map, dim_x, function
+    # archive = compute(dim_map=2, dim_x=6, f=rastrigin, n_niches=5000, n_gen=2500)
+    px = default_params.copy()
+    px['multi_task'] = True
+    px['multi_mode'] = sys.argv[1]
+    archive = compute(dim_map=2, dim_x=2, f=arm, n_niches=1000, num_evals=1e6, params=px)
