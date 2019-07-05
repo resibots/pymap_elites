@@ -44,6 +44,7 @@ import multiprocessing
 from pathlib import Path
 import kinematic_arm
 import sys
+import random
 
 global same_count
 same_count = 0
@@ -83,6 +84,19 @@ class Species:
         self.desc = desc
         self.fitness = fitness
         self.centroid = None
+        self.challenges = 0
+
+# https://stackoverflow.com/questions/32791911/fast-calculation-of-pareto-front-in-python
+def is_pareto_efficient_dumb(costs):
+    """
+    Find the pareto-efficient points
+    :param costs: An (n_points, n_costs) array
+    :return: A (n_points, ) boolean array, indicating whether each point is Pareto efficient
+    """
+    is_efficient = np.ones(costs.shape[0], dtype = bool)
+    for i, c in enumerate(costs):
+        is_efficient[i] = np.all(np.any(costs[:i]>c, axis=1)) and np.all(np.any(costs[i+1:]>c, axis=1))
+    return is_efficient
 
 def scale(x,params):
     x_scaled = []
@@ -168,8 +182,11 @@ def __add_to_archive(s, archive, kdt):
         zero_count = zero_count + 1
     if n in archive:
         same_count= same_count + 1
+        c = s.challenges + 1
         if s.fitness > archive[n].fitness:
             archive[n] = s
+        # we always add one, lost or won
+        archive[n].challenges = c
     else:
         archive[n] = s
 
@@ -262,7 +279,30 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
                     elif params['multi_mode'] == 'random':
                         niche = np.random.random(dim_map)
                         to_evaluate += [(z, f, niche, params)]
-                    # assum smoothness : take the less 'smooth' point (lower that its average neighbors)
+                    elif params['multi_mode'] == 'neighbors':
+                        for p in [x, y]:
+                            _, ind = kdt.query([p.desc], k=1)
+                            for ii in ind[0]:
+                                n = np.array(kdt.data[ii])
+                                to_evaluate += [(z, f, n, params)]
+                    elif params['multi_mode'] == 'neighbors_tournament':
+                        niches = []
+                        for p in range(0, params['n_size']):
+                            niches += [np.random.random(dim_map)]
+                        #niches.sort(key=lambda xx: np.linalg.norm(xx - x.desc))
+                        mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
+                        to_evaluate += [(z, f, mn, params)]
+                        # pareto sort density / challenges vs distance?
+                    elif params['multi_mode'] == 'challenges':
+                        niches = []
+                        keys = list(archive.keys())
+                        for p in range(0, 10):
+                            c = random.randint(0, len(keys) -1)
+                            niches += [keys[c]]
+                        niches.sort(key=lambda xx: archive[xx].challenges)
+                        to_evaluate += [(z, f, archive[niches[0]].desc, params)]
+
+                    # assume smoothness : take the less 'smooth' point (lower that its average neighbors)
                     # same thing on genotypes? look around and check the 'outlier'
             # parallel evaluation of the fitness
             if params['parallel'] == True:
@@ -275,7 +315,6 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
             for s in s_list:
                 __add_to_archive(s, archive, kdt)
         # write archive
-        print("b_evals:", b_evals)
         if params['dump_period'] != -1 and b_evals > params['dump_period']:
             print("Evals:", evals)
             __save_archive(archive, evals)
@@ -293,7 +332,8 @@ if __name__ == "__main__":
             f += x[i] * x[i] - 10 * math.cos(2 * math.pi * x[i])
         return -f, np.array([xx[0], xx[1]])
     def arm(angles, lengths):
-        assert(angles.shape == lengths.shape)
+        print(lengths.shape, angles.shape)
+        assert(angles.shape == angles.shape)
         target = 0.5 * np.ones(2)
         a = kinematic_arm.Arm(lengths)
         ef, _ = a.fw_kinematics(angles * math.pi)
@@ -304,4 +344,6 @@ if __name__ == "__main__":
     px = default_params.copy()
     px['multi_task'] = True
     px['multi_mode'] = sys.argv[1]
-    archive = compute(dim_map=2, dim_x=2, f=arm, n_niches=1000, num_evals=1e6, params=px)
+    px['n_size'] = int(sys.argv[2])
+
+    archive = compute(dim_map=2, dim_x=4, f=arm, n_niches=1000, num_evals=2e5, params=px)

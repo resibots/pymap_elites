@@ -15,7 +15,7 @@ params = {
     'xtick.labelsize': 10,
     'ytick.labelsize': 10,
     'text.usetex': False,
-    'figure.figsize': [4.5, 4.5]
+    'figure.figsize': [8.5, 8.5]
 }
 rcParams.update(params)
 
@@ -62,7 +62,7 @@ def compute_precision(a, ref):
     keys = list(a.keys())
     diff = 0
     for k in keys:
-        diff += math.fabs(ref[k] - a[k])
+        diff += a[k]
     return diff / len(keys)
 
 def compute_coverage(a, ref):
@@ -82,8 +82,10 @@ def compute_diff(dim, ref_fname, data_dir):
     precision = []
     coverage = []
     for i in range(0, len(data)):
-        precision += [compute_precision(data[i], ref)]
+        p = compute_precision(data[i], ref)
+        precision += [p]
         coverage += [compute_coverage(data[i], ref)]
+    print(precision[-1])
     return precision, coverage, evals
 
 
@@ -96,8 +98,8 @@ dim = 2
 ref_fname = sys.argv[1]
 for i in sys.argv[2:]:
     p, c, e = compute_diff(dim, ref_fname, i)
-    ax1.plot(e, p, linewidth=2, color=colors[k], label=i)
-    ax2.plot(e, c, linewidth=2, color=colors[k], label=i)
+    ax1.plot(e, p, linewidth=1, color=colors[k%len(colors)], label=i)
+    ax2.plot(e, c, linewidth=1, color=colors[k%len(colors)], label=i)
     k += 1
 # now all plot function should be applied to ax
 #ax.fill_between(x, perc_25_low_mut, perc_75_low_mut, alpha=0.25, linewidth=0, color=colors[0]) 
@@ -106,13 +108,15 @@ for i in sys.argv[2:]:
 #ax.plot(x, med_high_mut, linewidth=2, linestyle='--', color=colors[1])
 
 # change xlim to set_xlim
-#ax.set_xlim(-5, 400)
+ax1.set_xlim(0, 50000)
+ax2.set_xlim(0, 50000)
+
 #ax.set_ylim(-5000, 300)
 
 #change xticks to set_xticks
 #ax.set_xticks(np.arange(0, 500, 100))
 
-legend = ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=(len(sys.argv) - 2))
+legend = ax2.legend(loc=4)#bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=(3))
 #frame = legend.get_frame()
 #frame.set_facecolor('1.0')
 #frame.set_edgecolor('1.0')
