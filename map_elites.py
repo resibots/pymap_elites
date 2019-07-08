@@ -73,8 +73,8 @@ default_params = \
         # do we cache the result of CVT and reuse?
         "cvt_use_cache": True,
         # min/max of parameters
-        "min": [0,0,0,0,0,0],
-        "max": [1,1,1,1,1,1,1],
+        "min": [0]*15,
+        "max": [1]*15,
         "multi_task": False,
         "multi_mode": 'full'
     }
@@ -289,21 +289,9 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
                         niches = []
                         for p in range(0, params['n_size']):
                             niches += [np.random.random(dim_map)]
-                        #niches.sort(key=lambda xx: np.linalg.norm(xx - x.desc))
                         mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
                         # pareto sort density / challenges vs distance?
-                    elif params['multi_mode'] == 'challenges':
-                        niches = []
-                        keys = list(archive.keys())
-                        for p in range(0, 10):
-                            c = random.randint(0, len(keys) -1)
-                            niches += [keys[c]]
-                        niches.sort(key=lambda xx: archive[xx].challenges)
-                        to_evaluate += [(z, f, archive[niches[0]].desc, params)]
-
-                    # assume smoothness : take the less 'smooth' point (lower that its average neighbors)
-                    # same thing on genotypes? look around and check the 'outlier'
             # parallel evaluation of the fitness
             if params['parallel'] == True:
                 s_list = pool.map(evaluate, to_evaluate)
@@ -331,19 +319,21 @@ if __name__ == "__main__":
         for i in range(0, x.shape[0]):
             f += x[i] * x[i] - 10 * math.cos(2 * math.pi * x[i])
         return -f, np.array([xx[0], xx[1]])
-    def arm(angles, lengths):
-        print(lengths.shape, angles.shape)
-        assert(angles.shape == angles.shape)
+    def arm(angles, features):
+        angular_range = features[0] / len(angles)
+        lengths = np.ones(len(angles)) * features[1] / len(angles)
         target = 0.5 * np.ones(2)
         a = kinematic_arm.Arm(lengths)
-        ef, _ = a.fw_kinematics(angles * math.pi)
+        # command in 
+        command = (angles - 0.5) * angular_range * math.pi * 2
+        ef, _ = a.fw_kinematics(command)
         f = -np.linalg.norm(ef - target)
-        return f, lengths
+        return f, features
     # dim_map, dim_x, function
     # archive = compute(dim_map=2, dim_x=6, f=rastrigin, n_niches=5000, n_gen=2500)
     px = default_params.copy()
     px['multi_task'] = True
     px['multi_mode'] = sys.argv[1]
     px['n_size'] = int(sys.argv[2])
-
-    archive = compute(dim_map=2, dim_x=4, f=arm, n_niches=1000, num_evals=2e5, params=px)
+    dim_x = int(sys.argv[3])
+    archive = compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=1000, num_evals=2e5, params=px)
