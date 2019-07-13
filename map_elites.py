@@ -185,10 +185,11 @@ def __add_to_archive(s, archive, kdt):
         c = s.challenges + 1
         if s.fitness > archive[n].fitness:
             archive[n] = s
-        # we always add one, lost or won
-        archive[n].challenges = c
+            return 1
+        return 0
     else:
         archive[n] = s
+        return 1
 
 
 # evaluate a single vector (z) with a function f and return a species
@@ -225,6 +226,8 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
     # main loop
     evals = 0
     b_evals = 0
+    t_size = 1
+    successes = np.zeros(n_niches)
     while (evals < num_evals):
         to_evaluate = []
         if evals == 0:  # random initialization
@@ -291,6 +294,14 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
                             niches += [np.random.random(dim_map)]
                         mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
+                    elif params['multi_mode'] == 'tournament_random':
+                        t_size = np.random.randint(1, n_niches)
+                        niches = []
+                        for p in range(0, t_size):
+                            niches += [np.random.random(dim_map)]
+                        mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
+                        to_evaluate += [(z, f, mn, params)]
+
                         # pareto sort density / challenges vs distance?
             # parallel evaluation of the fitness
             if params['parallel'] == True:
@@ -300,8 +311,11 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
             evals += len(to_evaluate)
             b_evals += len(to_evaluate)
             # natural selection
+            suc = 0
             for s in s_list:
-                __add_to_archive(s, archive, kdt)
+                suc += __add_to_archive(s, archive, kdt)
+            if params['multi_mode'] == 'tournament_random':
+                successes[t_size] += suc
         # write archive
         if params['dump_period'] != -1 and b_evals > params['dump_period']:
             print("Evals:", evals)
