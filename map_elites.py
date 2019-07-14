@@ -146,7 +146,7 @@ def __cvt(k, dim, samples, cvt_use_cache=True):
     # otherwise, compute cvt
     x = np.random.rand(samples, dim)
     k_means = KMeans(init='k-means++', n_clusters=k,
-                     n_init=1, n_jobs=-1, verbose=1,algorithm="full")
+                     n_init=1, n_jobs=-1, verbose=1)#,algorithm="full")
     k_means.fit(x)
     return k_means.cluster_centers_
 
@@ -336,4 +336,4 @@ if __name__ == "__main__":
     px['multi_mode'] = sys.argv[1]
     px['n_size'] = int(sys.argv[2])
     dim_x = int(sys.argv[3])
-    archive = compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=1000, num_evals=2e5, params=px)
+    archive = compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=5000, num_evals=2e5, params=px)
