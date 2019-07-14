@@ -36,8 +36,11 @@
 #|
 #| The fact that you are presently reading this means that you have
 #| had knowledge of the CeCILL license and that you accept its terms.
+# 
+# from scipy.spatial import cKDTree : TODO
 from sklearn.neighbors import KDTree
 from sklearn.cluster import KMeans
+from scipy.spatial import distance
 import math
 import numpy as np
 import multiprocessing
@@ -217,48 +220,15 @@ def opt_tsize(successes, n_niches):
     if len(successes.keys()) < len(v):
         return random.choice(v)
     ucb = []
-    m = []
-    l = []
     for k in v:
         x = [i[0] for i in successes[k]]
         mean = sum(x) / float(len(x)) * 100
-        n_a = len(x)#?
+        n_a = len(x)
         ucb += [mean +  math.sqrt(2 * math.log(n) / n_a)]
-        m += [mean]
-        l += [n_a]
-    print(ucb, m, l)
     a = np.argmax(ucb)
-    print("chosen:", v[a], "  mean:", v[np.argmax(m)])
     t_size = v[a]
     return t_size
 
-
-# with a GP
-def opt_tsize_gp(successes, n_niches):
-    if len(successes.keys()) >0:
-        print("keys:", len(successes.keys()) , len(successes[list(successes.keys())[0]]))
-    if len(successes.keys()) < 5 or len(successes[list(successes.keys())[0]]) < 20:
-        return np.random.randint(1, 10)*20
-    else:
-        kernel = GPy.kern.RBF(input_dim=1, variance=1., lengthscale=1.)
-        x_gp = list(successes.keys())
-        y_gp = []
-        for ss in x_gp:
-            y_gp_m = 0
-            for sss in range(0, len(successes[ss])):
-                y_gp_m += successes[ss][sss][0]
-            y_gp_m /= len(successes[ss])
-            y_gp += [y_gp_m]
-        print("GP:", np.array(x_gp)/n_niches, y_gp)
-        gp_model = GPy.models.GPRegression(np.array(x_gp).reshape(-1, 1) / n_niches, np.array(y_gp).reshape(-1, 1) / n_niches, kernel)
-        np.savetxt("x.dat", np.array(x_gp).reshape(-1, 1) / n_niches)
-        np.savetxt("y.dat", np.array(y_gp).reshape(-1, 1) / n_niches)
-        gp_model.optimize()
-        pred, var = gp_model.predict(np.arange(0, n_niches).reshape(-1, 1) / n_niches)
-        t_size = np.argmax(pred + var) # UCB
-        if (t_size == 0):
-            t_size = 1.0
-        return int(t_size)
 
 # map-elites algorithm (CVT variant)
 def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=default_params):
@@ -361,7 +331,9 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
                         niches = []
                         for p in range(0, t_size):
                             niches += [np.random.random(dim_map)]
-                        mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
+                        cd = distance.cdist(niches, [x.desc], 'euclidean')
+                        mn = niches[np.argmin(cd)]
+                        #mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
                         # pareto sort density / challenges vs distance?
             # parallel evaluation of the fitness
@@ -379,12 +351,15 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
                 successes[t_size] += [(suc / params["batch_size"], evals)]
         if params['multi_mode'] == 'tournament_gp':# and (random.uniform(0, 1) < 0.05 or len(successes.keys()) < 5):
             t_size = opt_tsize(successes, n_niches)
-            print("t_size:", t_size)
         # write archive
         if params['dump_period'] != -1 and b_evals > params['dump_period']:
-            print("Evals:", evals)
             __save_archive(archive, evals)
             b_evals = 0
+            n_e = []
+            for v in successes.values():
+                n_e += [len(v)]
+            print(evals, n_e)
+            np.savetxt('t_size.dat', np.array(n_e))
     __save_archive(archive, evals)
     return archive
 
