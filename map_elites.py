@@ -45,6 +45,8 @@ from pathlib import Path
 import kinematic_arm
 import sys
 import random
+from collections import defaultdict
+import GPy
 
 global same_count
 same_count = 0
@@ -204,6 +206,60 @@ def evaluate(t):
         fit, desc = f(z)
         return Species(z, desc, fit)
 
+# bandit opt
+# probability matching / Adaptive pursuit Thierens GECCO 2005
+# UCB: schoenauer / Sebag
+def opt_tsize(successes, n_niches):
+    n = 0
+    for v in successes.values():
+        n += len(v)
+    v = [1, 10, 50, 100, 500, 1000]
+    if len(successes.keys()) < len(v):
+        return random.choice(v)
+    ucb = []
+    m = []
+    l = []
+    for k in v:
+        x = [i[0] for i in successes[k]]
+        mean = sum(x) / float(len(x)) * 100
+        n_a = len(x)#?
+        ucb += [mean +  math.sqrt(2 * math.log(n) / n_a)]
+        m += [mean]
+        l += [n_a]
+    print(ucb, m, l)
+    a = np.argmax(ucb)
+    print("chosen:", v[a], "  mean:", v[np.argmax(m)])
+    t_size = v[a]
+    return t_size
+
+
+# with a GP
+def opt_tsize_gp(successes, n_niches):
+    if len(successes.keys()) >0:
+        print("keys:", len(successes.keys()) , len(successes[list(successes.keys())[0]]))
+    if len(successes.keys()) < 5 or len(successes[list(successes.keys())[0]]) < 20:
+        return np.random.randint(1, 10)*20
+    else:
+        kernel = GPy.kern.RBF(input_dim=1, variance=1., lengthscale=1.)
+        x_gp = list(successes.keys())
+        y_gp = []
+        for ss in x_gp:
+            y_gp_m = 0
+            for sss in range(0, len(successes[ss])):
+                y_gp_m += successes[ss][sss][0]
+            y_gp_m /= len(successes[ss])
+            y_gp += [y_gp_m]
+        print("GP:", np.array(x_gp)/n_niches, y_gp)
+        gp_model = GPy.models.GPRegression(np.array(x_gp).reshape(-1, 1) / n_niches, np.array(y_gp).reshape(-1, 1) / n_niches, kernel)
+        np.savetxt("x.dat", np.array(x_gp).reshape(-1, 1) / n_niches)
+        np.savetxt("y.dat", np.array(y_gp).reshape(-1, 1) / n_niches)
+        gp_model.optimize()
+        pred, var = gp_model.predict(np.arange(0, n_niches).reshape(-1, 1) / n_niches)
+        t_size = np.argmax(pred + var) # UCB
+        if (t_size == 0):
+            t_size = 1.0
+        return int(t_size)
+
 # map-elites algorithm (CVT variant)
 def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=default_params):
     print(params)
@@ -227,7 +283,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
     evals = 0
     b_evals = 0
     t_size = 1
-    successes = np.zeros(n_niches)
+    successes = defaultdict(list)
     while (evals < num_evals):
         to_evaluate = []
         if evals == 0:  # random initialization
@@ -301,7 +357,12 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
                             niches += [np.random.random(dim_map)]
                         mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
-
+                    elif params['multi_mode'] == 'tournament_gp':
+                        niches = []
+                        for p in range(0, t_size):
+                            niches += [np.random.random(dim_map)]
+                        mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
+                        to_evaluate += [(z, f, mn, params)]
                         # pareto sort density / challenges vs distance?
             # parallel evaluation of the fitness
             if params['parallel'] == True:
@@ -314,8 +375,11 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
             suc = 0
             for s in s_list:
                 suc += __add_to_archive(s, archive, kdt)
-            if params['multi_mode'] == 'tournament_random':
-                successes[t_size] += suc
+            if params['multi_mode'] == 'tournament_random' or params['multi_mode'] == 'tournament_gp':
+                successes[t_size] += [(suc / params["batch_size"], evals)]
+        if params['multi_mode'] == 'tournament_gp':# and (random.uniform(0, 1) < 0.05 or len(successes.keys()) < 5):
+            t_size = opt_tsize(successes, n_niches)
+            print("t_size:", t_size)
         # write archive
         if params['dump_period'] != -1 and b_evals > params['dump_period']:
             print("Evals:", evals)
