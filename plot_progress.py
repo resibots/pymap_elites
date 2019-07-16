@@ -27,7 +27,7 @@ def __make_hashable(array):
 
 def get_evals(dir):
     d_list = glob.glob(dir + '/*')
-    f_list = glob.glob(d_list[0] + '/archive_*.dat')
+    f_list = glob.glob(d_list[0] + '/*archive_*.dat')
     evals = []
     for i in f_list:
         e = int(i.split('_')[-1].split('.')[0])
@@ -82,7 +82,8 @@ ax1 = fig.add_subplot(111)
 
 k = 0
 dim = 2
-for i in sys.argv[2:]:
+for i in sys.argv[1:]:
+    print(i)
     data = load_treatment(i, dim)
     m, p25, p75 = process_treatment(data)
     x = list(data.keys())
@@ -99,7 +100,7 @@ for i in sys.argv[2:]:
 #ax1.set_xlim(0, 50000)
 #ax2.set_xlim(0, 50000)
 
-#ax.set_ylim(-5000, 300)
+#ax1.set_ylim(-0.36, -0.31)
 
 #change xticks to set_xticks
 #ax.set_xticks(np.arange(0, 500, 100))
