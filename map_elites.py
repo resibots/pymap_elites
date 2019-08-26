@@ -49,30 +49,6 @@ same_count = 0
 global zero_count
 zero_count = 0
 
-default_params = \
-    {
-        # more of this -> higher-quality CVT
-        "cvt_samples": 25000,
-        # we evaluate in batches to paralleliez
-        "batch_size": 100,
-        # proportion of niches to be filled before starting
-        "random_init": 0.1,
-        # batch for random initialization
-        "random_init_batch": 100,
-        # parameters of the "mutation" operator
-        "sigma_iso": 0.01,
-        # parameters of the "cross-over" operator
-        "sigma_line": 0.2,
-        # when to write results (one generation = one batch)
-        "dump_period": 100,
-        # do we use several cores?
-        "parallel": True,
-        # do we cache the result of CVT and reuse?
-        "cvt_use_cache": True,
-        # min/max of parameters
-        "min": [0,0,-1,0,0,0],
-        "max": [0.1,10,0,1,1,1,1]
-    }
 class Species:
     def __init__(self, x, desc, fitness):
         self.x = x
@@ -103,6 +79,32 @@ def variation(x, archive, params):
         y_bounded.append(elem_bounded)
     return np.array(y_bounded)
 
+
+default_params = \
+    {
+        # more of this -> higher-quality CVT
+        "cvt_samples": 25000,
+        # we evaluate in batches to paralleliez
+        "batch_size": 100,
+        # proportion of niches to be filled before starting
+        "random_init": 0.1,
+        # batch for random initialization
+        "random_init_batch": 100,
+        # parameters of the "mutation" operator
+        "sigma_iso": 0.01,
+        # parameters of the "cross-over" operator
+        "sigma_line": 0.2,
+        # when to write results (one generation = one batch)
+        "dump_period": 100,
+        # do we use several cores?
+        "parallel": True,
+        # do we cache the result of CVT and reuse?
+        "cvt_use_cache": True,
+        # min/max of parameters
+        "min": [0,0,-1,0,0,0],
+        "max": [0.1,10,0,1,1,1,1],
+        "variation" : variation
+    }
 
 def __centroids_filename(k, dim):
     return 'centroids_' + str(k) + '_' + str(dim) + '.dat'
@@ -210,6 +212,7 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
                 for s in s_list:
                     __add_to_archive(s, archive, kdt)
                 init_count = len(archive)
+                print("init count:", init_count)
                 to_evaluate = []
         else:  # variation/selection loop
             keys = list(archive.keys())
@@ -217,7 +220,7 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
                 # parent selection
                 x = archive[keys[np.random.randint(len(keys))]]
                 # copy & add variation
-                z = variation(x.x, archive, params)
+                z = params["variation"](x.x, archive, params)
                 to_evaluate += [(z, f)]
             # parallel evaluation of the fitness
             if params['parallel'] == True:
@@ -229,10 +232,11 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
                 __add_to_archive(s, archive, kdt)
         # write archive
         if g % params['dump_period'] == 0 and params['dump_period'] != -1:
-            print("generation:", g)
+            print("generation:", g, " archive size:", len(archive.keys()))
             __save_archive(archive, g)
         __save_archive(archive, n_gen)
     return archive
+
 
 
 
