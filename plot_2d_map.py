@@ -44,19 +44,7 @@ import sys
 from matplotlib.ticker import FuncFormatter
 from sklearn.neighbors import KDTree
 
-cdict = {'red': [(0.0,  0.0, 0.0),
-                 (0.33, 0.0, 0.0),
-                 (0.66,  1.0, 1.0),
-                 (1.0,  1.0, 1.0)],
-         'blue': [(0.0,  0.0, 0.0),
-                  (0.33, 1.0, 1.0),
-                  (0.66,  0.0, 0.0),
-                  (1.0,  0.0, 0.0)],
-         'green': [(0.0,  0.0, 0.0),
-                   (0.33, 0.0, 0.0),
-                   (0.66,  0.0, 0.0),
-                   (1.0,  1.0, 1.0)]}
-my_cmap = matplotlib.colors.LinearSegmentedColormap('my_colormap', cdict, 256)
+my_cmap = plt.get_cmap('viridis')
 
 def voronoi_finite_polygons_2d(vor, radius=None):
     """
@@ -160,7 +148,9 @@ def plot_cvt(ax, centroids, fit, desc, x,dim1,dim2):
     print("Voronoi...")
     vor = Voronoi(centroids[:,0:2])
     regions, vertices = voronoi_finite_polygons_2d(vor)
-    norm = matplotlib.colors.Normalize(vmin=min(fit), vmax=max(fit))
+    print('min fit:', min(np.ma.masked_less(fit, -1000).compressed()))
+    print('max fit:', max(fit))
+    norm = matplotlib.colors.Normalize(vmin=min(np.ma.masked_less(fit, -1000).compressed()), vmax=max(fit))# vmin=min(fit)
     print("KD-Tree...")
     kdt = KDTree(centroids, leaf_size = 30, metric = 'euclidean')
 
@@ -203,6 +193,7 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(1, 1, figsize=(10, 10), facecolor='white', edgecolor='white')
     axes.set_xlim(0, 1)
     axes.set_ylim(0, 1)
+    #fig.colorbar(axes)
     plot_cvt(axes, centroids, fit, beh, x,2,4)
     fig.savefig('cvt.pdf')
     fig.savefig('cvt.png')

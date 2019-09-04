@@ -103,7 +103,10 @@ default_params = \
         # min/max of parameters
         "min": [0,0,-1,0,0,0],
         "max": [0.1,10,0,1,1,1,1],
-        "variation" : variation
+        # variation operator
+        "variation" : variation,
+        # save in 'bin' or 'txt'
+        "save_format":'txt'
     }
 
 def __centroids_filename(k, dim):
@@ -139,20 +142,30 @@ def __cvt(k, dim, samples, cvt_use_cache=True):
 def __make_hashable(array):
     return tuple(map(float, array))
 
-
+def archive_to_array(archive):
+    v = list(archive.values())[0]
+    d_desc = v.desc.shape[0]
+    d_vector = v.x.shape[0]
+    n_solutions = len(archive.values())
+    # fit, desc, x
+    a = np.zeros((n_solutions, 1 + d_desc + d_vector))
+    n = 0
+    for k in archive.values():
+        a[n, 0] = k.fitness
+        a[n, 1:d_desc+1] = k.desc
+        a[n, d_desc+1:a.shape[1]] = k.x
+        n += 1
+    return a
+    
 # format: centroid fitness desc x \n
 # centroid, desc and x are vectors
-def __save_archive(archive, gen):
-    def write_array(a, f):
-        for i in a:
-            f.write(str(i) + ' ')
-    filename = 'archive_' + str(gen) + '.dat'
-    with open(filename, 'w') as f:
-        for k in archive.values():
-            f.write(str(k.fitness) + ' ')
-            write_array(k.desc, f)
-            write_array(k.x, f)
-            f.write("\n")
+def __save_archive(archive, gen, format='bin'):
+    a = archive_to_array(archive)
+    filename = 'archive_' + str(gen)
+    if format == 'txt':
+        np.savetxt(filename + '.dat', a)
+    else:
+        np.save(filename + '.npy', a)
 
 
 def __add_to_archive(s, archive, kdt):
@@ -233,8 +246,8 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
         # write archive
         if g % params['dump_period'] == 0 and params['dump_period'] != -1:
             print("generation:", g, " archive size:", len(archive.keys()))
-            __save_archive(archive, g)
-        __save_archive(archive, n_gen)
+            __save_archive(archive, g, params['save_format'])
+    __save_archive(archive, n_gen, params['save_format'])
     return archive
 
 
