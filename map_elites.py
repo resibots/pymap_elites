@@ -208,6 +208,7 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
     for g in range(0, n_gen + 1):
         to_evaluate = []
         if g == 0:  # random initialization
+            print('init: ', end='', flush=True)
             while(init_count<=params['random_init'] * n_niches):
                 for i in range(0, params['random_init_batch']):
                     x = np.random.random(dim_x)
@@ -225,7 +226,7 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
                 for s in s_list:
                     __add_to_archive(s, archive, kdt)
                 init_count = len(archive)
-                print("init count:", init_count)
+                print("[{}/{}] ".format(init_count, int(params['random_init'] * n_niches)), end='', flush=True)
                 to_evaluate = []
         else:  # variation/selection loop
             keys = list(archive.keys())
@@ -240,6 +241,7 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
                 s_list = pool.map(evaluate, to_evaluate)
             else:
                 s_list = map(evaluate, to_evaluate)
+            print(str(len(s_list)) + ' ', end='', flush=True)
             # natural selection
             for s in s_list:
                 __add_to_archive(s, archive, kdt)
