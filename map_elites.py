@@ -79,6 +79,8 @@ def variation(x, archive, params):
         y_bounded.append(elem_bounded)
     return np.array(y_bounded)
 
+def uniform_random(dim_x):
+    return np.random.random(dim_x)
 
 default_params = \
     {
@@ -105,6 +107,7 @@ default_params = \
         "max": [0.1,10,0,1,1,1,1],
         # variation operator
         "variation" : variation,
+        "random": uniform_random,
         # save in 'bin' or 'txt'
         "save_format":'txt'
     }
@@ -211,7 +214,7 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
             print('init: ', end='', flush=True)
             while(init_count<=params['random_init'] * n_niches):
                 for i in range(0, params['random_init_batch']):
-                    x = np.random.random(dim_x)
+                    x = params['random'](dim_x)
                     x = scale(x, params)
                     x_bounded = []
                     for i in range(0,len(x)):
