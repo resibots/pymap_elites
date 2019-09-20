@@ -62,9 +62,12 @@ def scale(x,params):
     return np.array(x_scaled)
 
 def variation(x, archive, params):
+    assert(len(params["min"]) >= x.shape[0])
+    assert(len(params["max"]) >= x.shape[0])
     y = x.copy()
     keys = list(archive.keys())
     z = archive[keys[np.random.randint(len(keys))]].x
+    # this could be nicely vectorized
     for i in range(0,len(y)):
         # iso mutation
         a = np.random.normal(0, (params["max"][i]-params["min"][i])/300.0, 1)
@@ -72,15 +75,16 @@ def variation(x, archive, params):
         # line mutation
         b = np.random.normal(0, 20*(params["max"][i]-params["min"][i])/300.0, 1)
         y[i] =  y[i] + b*(x[i] - z[i])
-    y_bounded = []
-    for i in range(0,len(y)):
-        elem_bounded = min(y[i],params["max"][i])
-        elem_bounded = max(elem_bounded,params["min"][i])
-        y_bounded.append(elem_bounded)
-    return np.array(y_bounded)
+    y_bounded = np.clip(y, a_min=params["min"][0:len(y)], a_max=params["max"][0:len(y)])
+    return y_bounded
 
-def uniform_random(dim_x):
-    return np.random.random(dim_x)
+def uniform_random(dim_x, params):
+    x = np.random.random(dim_x)
+    return scale(x, params)
+
+
+def gen_to_phen_direct(gen):
+    return gen
 
 default_params = \
     {
@@ -103,11 +107,14 @@ default_params = \
         # do we cache the result of CVT and reuse?
         "cvt_use_cache": True,
         # min/max of parameters
-        "min": [0,0,-1,0,0,0],
-        "max": [0.1,10,0,1,1,1,1],
+        "min": [-1]*10,
+        "max": [1]*10,
         # variation operator
         "variation" : variation,
+        # operator for creating a random individual
         "random": uniform_random,
+        # operator to transform a genotype to a phenotype (development)
+        "gen_to_phen": gen_to_phen_direct,
         # save in 'bin' or 'txt'
         "save_format":'txt'
     }
@@ -170,7 +177,8 @@ def __save_archive(archive, gen, format='bin'):
     else:
         np.save(filename + '.npy', a)
 
-
+# try to add s to the archive
+# KDT is the kd-tree with the centroids (center of niches)
 def __add_to_archive(s, archive, kdt):
     global same_count
     global zero_count
@@ -188,44 +196,50 @@ def __add_to_archive(s, archive, kdt):
 # evaluate a single vector (x) with a function f and return a species
 # t = vector, function
 def evaluate(t):
-    z, f = t  # evaluate z with function f
+    x, z, f = t  # evaluate z (developped) with function f
     fit, desc = f(z)
-    return Species(z, desc, fit)
+    return Species(x, desc, fit)
+
+# evaluate a list of potential solutions
+# develop them to genotype first if needed
+def eval_all(pool, to_evaluate, f, params):
+    # apply dev and add the fitness to form a (x, f) tuple
+    # we need to convert to list in python3
+    to_evaluate_dev = list(zip(to_evaluate, map(params["gen_to_phen"], to_evaluate), [f]*len(to_evaluate)))
+    if params['parallel'] == True:
+        s_list = pool.map(evaluate, to_evaluate_dev)
+    else:
+        s_list = map(evaluate, to_evaluate_dev)
+    return s_list
 
 # map-elites algorithm (CVT variant)
-def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params):
+def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params, archive={}, centroids=np.empty(shape=(0,0))):
     num_cores = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(num_cores)
 
     # create the CVT
-    c = __cvt(n_niches, dim_map,
-              params['cvt_samples'], params['cvt_use_cache'])
-    kdt = KDTree(c, leaf_size=30, metric='euclidean')
-    __write_centroids(c)
-
-    # init archive (empty)
-    archive = {}
+    if centroids.shape[0] == 0:
+        centroids = __cvt(n_niches, dim_map,
+                  params['cvt_samples'], params['cvt_use_cache'])
+        __write_centroids(centroids)
+    kdt = KDTree(centroids, leaf_size=30, metric='euclidean')
 
     init_count = 0
     # main loop
     for g in range(0, n_gen + 1):
         to_evaluate = []
-        if g == 0:  # random initialization
+        if len(archive) == 0:  # random initialization
             print('init: ', end='', flush=True)
             while(init_count<=params['random_init'] * n_niches):
                 for i in range(0, params['random_init_batch']):
-                    x = params['random'](dim_x)
-                    x = scale(x, params)
+                    x = params['random'](dim_x, params)
                     x_bounded = []
                     for i in range(0,len(x)):
                         elem_bounded = min(x[i],params["max"][i])
                         elem_bounded = max(elem_bounded,params["min"][i])
                         x_bounded.append(elem_bounded)
-                    to_evaluate += [(np.array(x_bounded), f)]
-                if params['parallel'] == True:
-                    s_list = pool.map(evaluate, to_evaluate)
-                else:
-                    s_list = map(evaluate, to_evaluate)
+                    to_evaluate += [np.array(x_bounded)]
+                s_list = eval_all(pool, to_evaluate, f, params)
                 for s in s_list:
                     __add_to_archive(s, archive, kdt)
                 init_count = len(archive)
@@ -238,22 +252,19 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params)
                 x = archive[keys[np.random.randint(len(keys))]]
                 # copy & add variation
                 z = params["variation"](x.x, archive, params)
-                to_evaluate += [(z, f)]
-            # parallel evaluation of the fitness
-            if params['parallel'] == True:
-                s_list = pool.map(evaluate, to_evaluate)
-            else:
-                s_list = map(evaluate, to_evaluate)
+                to_evaluate += [z]
+            s_list = eval_all(pool, to_evaluate, f, params)
             print(str(len(s_list)) + ' ', end='', flush=True)
             # natural selection
             for s in s_list:
                 __add_to_archive(s, archive, kdt)
         # write archive
         if g % params['dump_period'] == 0 and params['dump_period'] != -1:
-            print("generation:", g, " archive size:", len(archive.keys()))
+            fit_list = np.array([x.fitness for x in archive.values()])
+            print("generation:{} size:{} max={} mean={}".format(g, len(archive.keys()), fit_list.max(), fit_list.mean()))
             __save_archive(archive, g, params['save_format'])
     __save_archive(archive, n_gen, params['save_format'])
-    return archive
+    return archive, centroids
 
 
 
@@ -267,4 +278,4 @@ if __name__ == "__main__":
             f += x[i] * x[i] - 10 * math.cos(2 * math.pi * x[i])
         return -f, np.array([xx[0], xx[1]])
 
-    archive = compute(2, 6, rastrigin, n_niches=5000, n_gen=2500)
+    archive, centroids = compute(2, 6, rastrigin, n_niches=5000, n_gen=2500)
