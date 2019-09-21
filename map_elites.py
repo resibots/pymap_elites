@@ -213,7 +213,7 @@ def eval_all(pool, to_evaluate, f, params):
     return s_list
 
 # map-elites algorithm (CVT variant)
-def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params, archive={}, centroids=np.empty(shape=(0,0))):
+def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params, archive={}, centroids=np.empty(shape=(0,0)), gen=0):
     num_cores = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(num_cores)
 
