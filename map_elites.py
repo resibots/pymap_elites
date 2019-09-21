@@ -226,7 +226,7 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params,
 
     init_count = 0
     # main loop
-    for g in range(0, n_gen + 1):
+    for g in range(gen, gen + n_gen + 1):
         to_evaluate = []
         if len(archive) == 0:  # random initialization
             print('init: ', end='', flush=True)
