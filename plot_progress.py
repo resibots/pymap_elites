@@ -5,6 +5,7 @@ import numpy as np
 import sys
 import math
 from collections import defaultdict
+from matplotlib import pyplot as plt
 
  # brewer2mpl.get_map args: set name  set type  number of colors
 bmap = brewer2mpl.get_map('Set2', 'qualitative', 7)
@@ -16,7 +17,7 @@ params = {
     'xtick.labelsize': 10,
     'ytick.labelsize': 10,
     'text.usetex': False,
-    'figure.figsize': [8.5, 8.5]
+    'figure.figsize': [3.5, 4.5]
 }
 rcParams.update(params)
 
@@ -71,14 +72,18 @@ def process_treatment(data):
     i = 0
     for k in keys:
         median[i] = np.median(data[k])
-        perc_25[i] = np.percentile(data[k], 25)
-        perc_75[i] = np.percentile(data[k], 75)
+        perc_25[i] = np.percentile(data[k], 5)
+        perc_75[i] = np.percentile(data[k], 95)
         i += 1
     return median, perc_25, perc_75
 
 
-fig = figure() # no frame
+fig = figure(frameon=False) # no frame
 ax1 = fig.add_subplot(111)
+ax1.grid(axis='y', color="0.9", linestyle='--', linewidth=1)
+plt.box(False)
+plt.ticklabel_format(axis='both', style='sci', scilimits=(-2,2))
+
 
 k = 0
 dim = 2
@@ -87,8 +92,11 @@ for i in sys.argv[1:]:
     data = load_treatment(i, dim)
     m, p25, p75 = process_treatment(data)
     x = list(data.keys())
-    ax1.fill_between(x, p25, p75, alpha=0.25, linewidth=0, color=colors[k%len(colors)]) 
-    ax1.plot(x, m, linewidth=1, color=colors[k%len(colors)], label=i)
+    ax1.fill_between(x, p25, p75, alpha=0.25, linewidth=0, color=colors[k%len(colors)])
+    if ('mt-map-elites' in i) or ('cma' in i) or ('sampling' in i):
+        ax1.plot(x, m, linewidth=2, color=colors[k%len(colors)], label=i)
+    else:
+        ax1.plot(x, m, '--', linewidth=1, color=colors[k%len(colors)], label=i)
     k += 1
 # now all plot function should be applied to ax
 #ax.fill_between(x, perc_25_low_mut, perc_75_low_mut, alpha=0.25, linewidth=0, color=colors[0]) 
@@ -100,12 +108,16 @@ for i in sys.argv[1:]:
 #ax1.set_xlim(0, 50000)
 #ax2.set_xlim(0, 50000)
 
-#ax1.set_ylim(-0.36, -0.31)
+ax1.set_ylim(-0.5, -0.29)
 
 #change xticks to set_xticks
-#ax.set_xticks(np.arange(0, 500, 100))
+ax1.set_yticks(np.arange(-0.5, -0.29, 0.05))
 
 legend = ax1.legend(loc=4)#bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=(3))
+frame = legend.get_frame()
+frame.set_facecolor('0.9')
+frame.set_edgecolor('1.0')
+
 #frame = legend.get_frame()
 #frame.set_facecolor('1.0')
 #frame.set_edgecolor('1.0')
