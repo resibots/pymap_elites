@@ -389,4 +389,5 @@ if __name__ == "__main__":
     px['multi_mode'] = sys.argv[1]
     px['n_size'] = int(sys.argv[2])
     dim_x = int(sys.argv[3])
-    archive = compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=5000, num_evals=2e5, params=px)
+    archive = compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=1000, num_evals=2e5, params=px)
+    
