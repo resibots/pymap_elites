@@ -43,11 +43,6 @@ import numpy as np
 import multiprocessing
 from pathlib import Path
 
-global same_count
-same_count = 0
-
-global zero_count
-zero_count = 0
 
 class Species:
     def __init__(self, x, desc, fitness):
@@ -180,19 +175,18 @@ def __save_archive(archive, gen, format='bin'):
 # try to add s to the archive
 # KDT is the kd-tree with the centroids (center of niches)
 def __add_to_archive(s, archive, kdt):
-    global same_count
-    global zero_count
     niche_index = kdt.query([s.desc], k=1)[1][0][0]
     niche = kdt.data[niche_index]
     n = __make_hashable(niche)
-    if(np.all(s.desc==0)):
-        zero_count = zero_count + 1
     if n in archive:
-        same_count= same_count + 1
         if s.fitness > archive[n].fitness:
             archive[n] = s
+            return 1
     else:
         archive[n] = s
+        return 1
+    return 0
+
 # evaluate a single vector (x) with a function f and return a species
 # t = vector, function
 def evaluate(t):
@@ -213,10 +207,10 @@ def eval_all(pool, to_evaluate, f, params):
     return s_list
 
 # map-elites algorithm (CVT variant)
-def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params, archive={}, centroids=np.empty(shape=(0,0)), gen=0):
-    num_cores = multiprocessing.cpu_count()
-    pool = multiprocessing.Pool(num_cores)
-
+def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params, archive={}, centroids=np.empty(shape=(0,0)), gen=0, pool=None):
+    if pool==None:
+        num_cores = multiprocessing.cpu_count()
+        pool = multiprocessing.Pool(num_cores)
     # create the CVT
     if centroids.shape[0] == 0:
         centroids = __cvt(n_niches, dim_map,
@@ -225,8 +219,9 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params,
     kdt = KDTree(centroids, leaf_size=30, metric='euclidean')
 
     init_count = 0
+    successes = 0 # number of additions to archive (for external parameter control)
     # main loop
-    for g in range(gen, gen + n_gen + 1):
+    for g in range(gen, gen + n_gen):
         to_evaluate = []
         if len(archive) == 0:  # random initialization
             print('init: ', end='', flush=True)
@@ -257,14 +252,16 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params,
             print(str(len(s_list)) + ' ', end='', flush=True)
             # natural selection
             for s in s_list:
-                __add_to_archive(s, archive, kdt)
+                successes += __add_to_archive(s, archive, kdt)
         # write archive
         if g % params['dump_period'] == 0 and params['dump_period'] != -1:
             fit_list = np.array([x.fitness for x in archive.values()])
             print("generation:{} size:{} max={} mean={}".format(g, len(archive.keys()), fit_list.max(), fit_list.mean()))
             __save_archive(archive, g, params['save_format'])
     __save_archive(archive, n_gen, params['save_format'])
-    return archive, centroids
+    #pool.close()
+    #del pool
+    return archive, centroids, successes
 
 
 

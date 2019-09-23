@@ -132,7 +132,11 @@ def voronoi_finite_polygons_2d(vor, radius=None):
 
 def load_data(filename, dim,dim_x):
     print("Loading ",filename)
-    data = np.loadtxt(filename)
+    if 'dat' in filename:
+        data = np.loadtxt(filename)
+    else:
+        data = np.load(filename)
+
     fit = data[:, 0:1]
     desc = data[:,1: dim+1]
     x = data[:,dim+1:dim+1+dim_x]
