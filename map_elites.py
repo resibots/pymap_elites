@@ -207,7 +207,15 @@ def eval_all(pool, to_evaluate, f, params):
     return s_list
 
 # map-elites algorithm (CVT variant)
-def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params, archive={}, centroids=np.empty(shape=(0,0)), gen=0, pool=None):
+def compute(dim_map, dim_x, f, 
+            n_niches=1000, 
+            n_gen=1000, 
+            params=default_params, 
+            archive={}, 
+            centroids=np.empty(shape=(0,0)), 
+            gen=0, 
+            log_file=None, 
+            pool=None):
     if pool==None:
         num_cores = multiprocessing.cpu_count()
         pool = multiprocessing.Pool(num_cores)
@@ -258,7 +266,11 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=default_params,
             fit_list = np.array([x.fitness for x in archive.values()])
             print("generation:{} size:{} max={} mean={}".format(g, len(archive.keys()), fit_list.max(), fit_list.mean()))
             __save_archive(archive, g, params['save_format'])
-    __save_archive(archive, n_gen, params['save_format'])
+        if log_file != None:
+            fit_list = np.array([x.fitness for x in archive.values()])
+            log_file.write("{} {} {} {}\n".format(g, len(archive.keys()), fit_list.max(), fit_list.mean()))
+            log_file.flush()
+    #__save_archive(archive, n_gen, params['save_format'])
     #pool.close()
     #del pool
     return archive, centroids, successes
