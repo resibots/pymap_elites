@@ -137,9 +137,12 @@ def __cvt(k, dim, samples, cvt_use_cache=True):
             print("WARNING: using cached CVT:", fname)
             return np.loadtxt(fname)
     # otherwise, compute cvt
+    if k > 5000:
+        print('too many centroids for k-means, returning random centroids')
+        return np.random.rand(k, dim)
     x = np.random.rand(samples, dim)
     k_means = KMeans(init='k-means++', n_clusters=k,
-                     n_init=1, n_jobs=-1, verbose=1,algorithm="full")
+                     n_init=1, n_jobs=-1, verbose=1, algorithm="full")
     k_means.fit(x)
     return k_means.cluster_centers_
 
