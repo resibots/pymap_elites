@@ -372,21 +372,4 @@ if __name__ == "__main__":
         for i in range(0, x.shape[0]):
             f += x[i] * x[i] - 10 * math.cos(2 * math.pi * x[i])
         return -f, np.array([xx[0], xx[1]])
-    def arm(angles, features):
-        angular_range = features[0] / len(angles)
-        lengths = np.ones(len(angles)) * features[1] / len(angles)
-        target = 0.5 * np.ones(2)
-        a = kinematic_arm.Arm(lengths)
-        # command in 
-        command = (angles - 0.5) * angular_range * math.pi * 2
-        ef, _ = a.fw_kinematics(command)
-        f = -np.linalg.norm(ef - target)
-        return f, features
-    # dim_map, dim_x, function
-    # archive = compute(dim_map=2, dim_x=6, f=rastrigin, n_niches=5000, n_gen=2500)
-    px = default_params.copy()
-    px['multi_task'] = True
-    px['multi_mode'] = sys.argv[1]
-    px['n_size'] = int(sys.argv[2])
-    dim_x = int(sys.argv[3])
-    archive = compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=1000, num_evals=2e5, params=px)
+ 
