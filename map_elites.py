@@ -151,7 +151,7 @@ def __cvt(k, dim, samples, cvt_use_cache=True):
     # otherwise, compute cvt
     x = np.random.rand(samples, dim)
     k_means = KMeans(init='k-means++', n_clusters=k,
-                     n_init=1, n_jobs=-1, verbose=1,algorithm="full")
+                     n_init=1, n_jobs=-1, verbose=1)#,algorithm="full")
     k_means.fit(x)
     return k_means.cluster_centers_
 

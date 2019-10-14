@@ -26,7 +26,7 @@ def test_cma(centroids_fname, dim):
     opts = cma.CMAOptions()
     #for i in opts:
     #    print(i, ' => ', opts[i])
-    max_evals = 2e5
+    max_evals = 1e6
     opts.set('tolfun', 1e-20)
     opts['tolx'] = 1e-20
     opts['verb_disp'] = 1e10
