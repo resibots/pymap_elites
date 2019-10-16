@@ -159,7 +159,8 @@ def plot_cvt(ax, centroids, fit, desc, x,dim1,dim2):
     kdt = KDTree(centroids, leaf_size = 30, metric = 'euclidean')
 
     print("plotting contour...")
-    #ax.scatter(centroids[:, 0], centroids[:,1], c=fit)
+    print(fit.shape)
+    ax.scatter(centroids[:, 0], centroids[:,1], marker='x', c='#aaaaaa')
     # contours
     for i, region in enumerate(regions):
         polygon = vertices[region]

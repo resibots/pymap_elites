@@ -50,18 +50,16 @@ class Species:
         self.desc = desc
         self.fitness = fitness
 
-def scale(x,params):
+def scale(x, params):
     x_scaled = []
     for i in range(0,len(x)) :
         x_scaled.append(x[i] * (params["max"][i] - params["min"][i]) + params["min"][i])
     return np.array(x_scaled)
 
-def variation(x, archive, params):
+def variation_xy(x, z, params):
     assert(len(params["min"]) >= x.shape[0])
     assert(len(params["max"]) >= x.shape[0])
     y = x.copy()
-    keys = list(archive.keys())
-    z = archive[keys[np.random.randint(len(keys))]].x
     # this could be nicely vectorized
     for i in range(0,len(y)):
         # iso mutation
@@ -72,6 +70,11 @@ def variation(x, archive, params):
         y[i] =  y[i] + b*(x[i] - z[i])
     y_bounded = np.clip(y, a_min=params["min"][0:len(y)], a_max=params["max"][0:len(y)])
     return y_bounded
+
+def variation(x, archive, params):
+    keys = list(archive.keys())
+    z = archive[keys[np.random.randint(len(keys))]].x
+    return variation_xy(x, z, params)
 
 def uniform_random(dim_x, params):
     x = np.random.random(dim_x)
