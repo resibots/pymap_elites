@@ -38,7 +38,7 @@
 #| had knowledge of the CeCILL license and that you accept its terms.
 # 
 # from scipy.spatial import cKDTree : TODO
-from sklearn.neighbors import KDTree
+from sklearn.neighbors import KDTree, DistanceMetric
 from sklearn.cluster import KMeans
 from scipy.spatial import distance
 import math
@@ -231,7 +231,9 @@ def opt_tsize(successes, n_niches):
 
 
 # map-elites algorithm (CVT variant)
-def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=default_params):
+def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, 
+            centroids='cvt',
+            params=default_params):
     print(params)
     assert(f != None)
     assert(dim_map != -1)
@@ -239,9 +241,17 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, params=d
     num_cores = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(num_cores)
 
-    # create the CVT
-    c = __cvt(n_niches, dim_map,
-              params['cvt_samples'], params['cvt_use_cache'])
+    # create the centroids if needed
+    c = None
+    if centroids == 'cvt':
+        c = __cvt(n_niches, dim_map,
+                params['cvt_samples'], 
+                params['cvt_use_cache'])
+    elif type(centroids) is np.ndarray: # we can provide a 2D array, each row = 1 centroid
+        c = centroids
+    else:
+        print("[map-elites] ERROR: unsupported centroid type => ", centroids)
+
     kdt = KDTree(c, leaf_size=30, metric='euclidean')
     __write_centroids(c)
 
@@ -372,4 +382,4 @@ if __name__ == "__main__":
         for i in range(0, x.shape[0]):
             f += x[i] * x[i] - 10 * math.cos(2 * math.pi * x[i])
         return -f, np.array([xx[0], xx[1]])
- 
+    my_map = compute(dim_map=2, dim_x = 10, n_niches=1500, f=rastrigin)
