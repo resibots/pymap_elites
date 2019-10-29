@@ -233,6 +233,7 @@ def opt_tsize(successes, n_niches):
 # map-elites algorithm (CVT variant)
 def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, 
             centroids='cvt',
+            tasks=[], 
             params=default_params):
     print(params)
     assert(f != None)
@@ -338,11 +339,14 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                         mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
                     elif params['multi_mode'] == 'tournament_gp':
-                        niches = []
+                        niches_centroids = []
+                        niches_tasks = []
                         for p in range(0, t_size):
-                            niches += [np.random.random(dim_map)]
-                        cd = distance.cdist(niches, [x.desc], 'euclidean')
-                        mn = niches[np.argmin(cd)]
+                            n = np.random.random(centroids.shape[0])
+                            niches_centroids += [centroids[n, :]]
+                            niches_tasks += [tasks[n]]
+                        cd = distance.cdist(niches_centroids, [x.desc], 'euclidean')
+                        mn = niches_tasks[np.argmin(cd)]
                         #mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
                         # pareto sort density / challenges vs distance?
