@@ -253,7 +253,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
         print("[map-elites] ERROR: unsupported centroid type => ", centroids)
 
     if tasks == []:
-        tasks = centroids
+        tasks = c
     kdt = KDTree(c, leaf_size=30, metric='euclidean')
     __write_centroids(c)
 
@@ -345,7 +345,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                         niches_centroids = []
                         niches_tasks = []
                         for p in range(0, t_size):
-                            n = np.random.random(c.shape[0])
+                            n = np.random.randint(c.shape[0])
                             niches_centroids += [c[n, :]]
                             niches_tasks += [tasks[n]]
                         cd = distance.cdist(niches_centroids, [x.desc], 'euclidean')
@@ -354,7 +354,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                     elif params['multi_mode'] == 'bandit_parents':
                         # we select the niche, then the parents according to the niche
                         # (we ignore the x that was already selected)
-                        niche = centroids[np.random.random(c.shape[0])]
+                        niche = centroids[np.random.randint(c.shape[0])]
                         parents = []
                         for k in [1,2]:
                             pp = [archive[keys[np.random.randint(len(keys))]] for p in range(0, t_size)]
