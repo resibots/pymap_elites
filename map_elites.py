@@ -38,7 +38,7 @@
 #| had knowledge of the CeCILL license and that you accept its terms.
 # 
 # from scipy.spatial import cKDTree : TODO
-from sklearn.neighbors import KDTree, DistanceMetric
+from sklearn.neighbors import KDTree
 from sklearn.cluster import KMeans
 from scipy.spatial import distance
 import math
@@ -49,7 +49,6 @@ import kinematic_arm
 import sys
 import random
 from collections import defaultdict
-import GPy
 
 global same_count
 same_count = 0
@@ -253,6 +252,8 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
     else:
         print("[map-elites] ERROR: unsupported centroid type => ", centroids)
 
+    if tasks == []:
+        tasks = centroids
     kdt = KDTree(c, leaf_size=30, metric='euclidean')
     __write_centroids(c)
 
@@ -302,54 +303,67 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                 if not params['multi_task']:
                     to_evaluate += [(z, f, x, params)]
                 else:
-                    # to_evaluate += multi_task_eval(c, archive, params)
-                    # now decide where to evaluate
-                    # randomly on the map (e.g. 10% niches)?
-                    # in the neighborhood (fixed) with 10% niches?
-                    # in the neighborhood (adaptive?)
-                    # according to the distance between the parents (in behavioral space?)?
-                    # in the neighborhood while expanding providing that it works?
-                    # evaluate everywhere
                     if params['multi_mode'] == 'full':
+                        # evaluate on all the niches
                         for n in c: # for each centroid
                             to_evaluate += [(z, f, n, params)]
                     elif params['multi_mode'] == 'parents':
+                        # evaluate on the niche of the parents
                         to_evaluate += [(z, f, x.desc, params)]
                         to_evaluate += [(z, f, y.desc, params)]
                     elif params['multi_mode'] == 'random':
+                        # evaluate on a random niche
                         niche = np.random.random(dim_map)
                         to_evaluate += [(z, f, niche, params)]
                     elif params['multi_mode'] == 'neighbors':
+                        # evaluate on the nearest neighbor of each parent
                         for p in [x, y]:
                             _, ind = kdt.query([p.desc], k=1)
                             for ii in ind[0]:
                                 n = np.array(kdt.data[ii])
                                 to_evaluate += [(z, f, n, params)]
                     elif params['multi_mode'] == 'neighbors_tournament':
+                        # do a tournmanent to find the niche that is close to x
+                        # (parametrized by n_size)
                         niches = []
                         for p in range(0, params['n_size']):
                             niches += [np.random.random(dim_map)]
                         mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
                     elif params['multi_mode'] == 'tournament_random':
+                        # do a tournmanent to find the niche that is close to x
+                        # (with a random size)
                         t_size = np.random.randint(1, n_niches)
                         niches = []
                         for p in range(0, t_size):
                             niches += [np.random.random(dim_map)]
                         mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
-                    elif params['multi_mode'] == 'tournament_gp':
+                    elif params['multi_mode'] == 'bandit_niche':
+                        # we select the parents, then we select the niche
+                        # tournament using the bandit
                         niches_centroids = []
                         niches_tasks = []
                         for p in range(0, t_size):
-                            n = np.random.random(centroids.shape[0])
-                            niches_centroids += [centroids[n, :]]
+                            n = np.random.random(c.shape[0])
+                            niches_centroids += [c[n, :]]
                             niches_tasks += [tasks[n]]
                         cd = distance.cdist(niches_centroids, [x.desc], 'euclidean')
                         mn = niches_tasks[np.argmin(cd)]
-                        #mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
-                        # pareto sort density / challenges vs distance?
+                    elif params['multi_mode'] == 'bandit_parents':
+                        # we select the niche, then the parents according to the niche
+                        # (we ignore the x that was already selected)
+                        niche = centroids[np.random.random(c.shape[0])]
+                        parents = []
+                        for k in [1,2]:
+                            pp = [archive[keys[np.random.randint(len(keys))]] for p in range(0, t_size)]
+                            cd = distance.cdist(pp, [niche], 'euclidean')
+                            parents += [pp[np.argmin(cd)]]
+                        z = variation(parents[0].x, parents[1].x, archive, params)
+                        to_evaluate += [(z, f, niche, params)]
+
+            
             # parallel evaluation of the fitness
             if params['parallel'] == True:
                 s_list = pool.map(evaluate, to_evaluate)
@@ -363,7 +377,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                 suc += __add_to_archive(s, archive, kdt)
             if params['multi_mode'] == 'tournament_random' or params['multi_mode'] == 'tournament_gp':
                 successes[t_size] += [(suc / params["batch_size"], evals)]
-        if params['multi_mode'] == 'tournament_gp':# and (random.uniform(0, 1) < 0.05 or len(successes.keys()) < 5):
+        if params['multi_mode'] == 'bandit_niche':
             t_size = opt_tsize(successes, n_niches)
         # write archive
         if params['dump_period'] != -1 and b_evals > params['dump_period']:
