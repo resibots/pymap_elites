@@ -176,10 +176,10 @@ def __save_archive(archive, gen):
             f.write("\n")
 
 
-def __add_to_archive(s, archive, kdt):
+def __add_to_archive(s, centroid, archive, kdt):
     global same_count
     global zero_count
-    niche_index = kdt.query([s.desc], k=1)[1][0][0]
+    niche_index = kdt.query([centroid], k=1)[1][0][0]
     niche = kdt.data[niche_index]
     n = __make_hashable(niche)
     s.centroid = n
@@ -252,7 +252,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
         c = centroids
     else:
         print("[map-elites] ERROR: unsupported centroid type => ", centroids)
-
+        return None
     kdt = KDTree(c, leaf_size=30, metric='euclidean')
     __write_centroids(c)
 
@@ -267,6 +267,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
     successes = defaultdict(list)
     while (evals < num_evals):
         to_evaluate = []
+        to_evaluate_centroid = []
         if evals == 0:  # random initialization
             while(init_count<=params['random_init'] * n_niches):
                 for i in range(0, params['random_init_batch']):
@@ -278,17 +279,21 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                         elem_bounded = max(elem_bounded,params["min"][i])
                         x_bounded.append(elem_bounded)
                     # random niche for multitask only (ignored otherwise)
-                    rand_niche = np.random.random(dim_map)
+                    # rand_niche = np.random.random(dim_map)
+                    n = random.randint(0, centroids.shape[0] - 1)
+                    features = tasks[n]
+                    centroid = centroids[n,:]
                     # put in the pool to be evaluated
-                    to_evaluate += [(np.array(x_bounded), f, rand_niche, params)]
+                    to_evaluate += [(np.array(x_bounded), f, features, params)]
+                    to_evaluate_centroid += [centroid]
                 if params['parallel'] == True:
                     s_list = pool.map(evaluate, to_evaluate)
                 else:
                     s_list = map(evaluate, to_evaluate)
                 evals += len(to_evaluate)
                 b_evals += len(to_evaluate)
-                for s in s_list:
-                    __add_to_archive(s, archive, kdt)
+                for i in range(0, len(s_list)):
+                    __add_to_archive(s_list[i], to_evaluate_centroid[i], archive, kdt)
                 init_count = len(archive)
                 to_evaluate = []
         else:  # variation/selection loop
@@ -342,13 +347,14 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                         niches_centroids = []
                         niches_tasks = []
                         for p in range(0, t_size):
-                            n = np.random.random(centroids.shape[0])
+                            n = random.randint(0, centroids.shape[0] - 1)
                             niches_centroids += [centroids[n, :]]
                             niches_tasks += [tasks[n]]
                         cd = distance.cdist(niches_centroids, [x.desc], 'euclidean')
-                        mn = niches_tasks[np.argmin(cd)]
+                        cd_min = np.argmin(cd)
                         #mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
-                        to_evaluate += [(z, f, mn, params)]
+                        to_evaluate += [(z, f, niches_tasks[cd_min], params)]
+                        to_evaluate_centroid += [centroids[cd_min]]
                         # pareto sort density / challenges vs distance?
             # parallel evaluation of the fitness
             if params['parallel'] == True:
@@ -359,8 +365,8 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
             b_evals += len(to_evaluate)
             # natural selection
             suc = 0
-            for s in s_list:
-                suc += __add_to_archive(s, archive, kdt)
+            for s in range(0, len(s_list)):
+                suc += __add_to_archive(s[i], centroids[i], archive, kdt)
             if params['multi_mode'] == 'tournament_random' or params['multi_mode'] == 'tournament_gp':
                 successes[t_size] += [(suc / params["batch_size"], evals)]
         if params['multi_mode'] == 'tournament_gp':# and (random.uniform(0, 1) < 0.05 or len(successes.keys()) < 5):
