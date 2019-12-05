@@ -45,7 +45,7 @@ import math
 import numpy as np
 import multiprocessing
 from pathlib import Path
-import kinematic_arm
+#----#import kinematic_arm
 import sys
 import random
 from collections import defaultdict
@@ -175,10 +175,10 @@ def __save_archive(archive, gen):
             f.write("\n")
 
 
-def __add_to_archive(s, archive, kdt):
+def __add_to_archive(s, centroid, archive, kdt):
     global same_count
     global zero_count
-    niche_index = kdt.query([s.desc], k=1)[1][0][0]
+    niche_index = kdt.query([centroid], k=1)[1][0][0]
     niche = kdt.data[niche_index]
     n = __make_hashable(niche)
     s.centroid = n
@@ -243,20 +243,22 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
 
     # create the centroids if needed
     c = None
-    if centroids == 'cvt':
+    if type(centroids) is str and centroids == 'cvt':
+        print('using CVT for centroids')
         c = __cvt(n_niches, dim_map,
                 params['cvt_samples'], 
                 params['cvt_use_cache'])
     elif type(centroids) is np.ndarray: # we can provide a 2D array, each row = 1 centroid
         c = centroids
+        n_niches = centroids.shape[0]
     else:
         print("[map-elites] ERROR: unsupported centroid type => ", centroids)
 
     if tasks == []:
         tasks = c
+
     kdt = KDTree(c, leaf_size=30, metric='euclidean')
     __write_centroids(c)
-
     # init archive (empty)
     archive = {}
 
@@ -268,30 +270,28 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
     successes = defaultdict(list)
     while (evals < num_evals):
         to_evaluate = []
-        if evals == 0:  # random initialization
-            while(init_count<=params['random_init'] * n_niches):
-                for i in range(0, params['random_init_batch']):
-                    x = np.random.random(dim_x)
-                    x = scale(x, params)
-                    x_bounded = []
-                    for i in range(0,len(x)):
-                        elem_bounded = min(x[i],params["max"][i])
-                        elem_bounded = max(elem_bounded,params["min"][i])
-                        x_bounded.append(elem_bounded)
-                    # random niche for multitask only (ignored otherwise)
-                    rand_niche = np.random.random(dim_map)
-                    # put in the pool to be evaluated
-                    to_evaluate += [(np.array(x_bounded), f, rand_niche, params)]
-                if params['parallel'] == True:
-                    s_list = pool.map(evaluate, to_evaluate)
-                else:
-                    s_list = map(evaluate, to_evaluate)
-                evals += len(to_evaluate)
-                b_evals += len(to_evaluate)
-                for s in s_list:
-                    __add_to_archive(s, archive, kdt)
-                init_count = len(archive)
-                to_evaluate = []
+        to_evaluate_centroid = []
+        if evals == 0 or init_count<=params['random_init'] * n_niches:
+            for i in range(0, params['random_init_batch']):
+                x = np.random.random(dim_x)
+                x = scale(x, params)
+                x_bounded = []
+                for i in range(0,len(x)):
+                    elem_bounded = min(x[i],params["max"][i])
+                    elem_bounded = max(elem_bounded,params["min"][i])
+                    x_bounded.append(elem_bounded)
+                n = random.randint(0, c.shape[0] - 1)
+                to_evaluate += [(np.array(x_bounded), f, tasks[n], params)]
+                to_evaluate_centroid += [c[n,:]]
+            if params['parallel'] == True:
+                s_list = pool.map(evaluate, to_evaluate)
+            else:
+                s_list = map(evaluate, to_evaluate)
+            evals += len(to_evaluate)
+            b_evals += len(to_evaluate)
+            for i in range(0, len(list(s_list))):
+                s = __add_to_archive(s_list[i], to_evaluate_centroid[i], archive, kdt)
+            init_count = len(archive)
         else:  # variation/selection loop
             keys = list(archive.keys())
             for n in range(0, params['batch_size']):
@@ -349,8 +349,10 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                             niches_centroids += [c[n, :]]
                             niches_tasks += [tasks[n]]
                         cd = distance.cdist(niches_centroids, [x.desc], 'euclidean')
-                        mn = niches_tasks[np.argmin(cd)]
-                        to_evaluate += [(z, f, mn, params)]
+                        cd_min = np.argmin(cd)
+                        to_evaluate += [(z, f, niches_tasks[cd_min], params)]
+                        to_evaluate_centroid += [niches_centroids[cd_min]]
+
                     elif params['multi_mode'] == 'bandit_parents':
                         # we select the niche, then the parents according to the niche
                         # (we ignore the x that was already selected)
@@ -360,10 +362,15 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                             pp = [ keys[np.random.randint(len(keys))] for p in range(0, t_size) ]
                             cd = distance.cdist(pp, [niche], 'euclidean')
                             parents += [pp[np.argmin(cd)]]
-                        z = variation(archive[parents[0]].x, archive[parents[1]].x, archive, params)
-                        to_evaluate += [(z, f, niche, params)]
-
-            
+                            n = random.randint(0, c.shape[0] - 1)
+                            niches_centroids += [c[n, :]]
+                            niches_tasks += [tasks[n]]
+                        cd = distance.cdist(niches_centroids, [x.desc], 'euclidean')
+                        cd_min = np.argmin(cd)
+                        #mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
+                        to_evaluate += [(z, f, niches_tasks[cd_min], params)]
+                        to_evaluate_centroid += [centroids[cd_min]]
+                        # pareto sort density / challenges vs distance?
             # parallel evaluation of the fitness
             if params['parallel'] == True:
                 s_list = pool.map(evaluate, to_evaluate)
@@ -373,9 +380,9 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
             b_evals += len(to_evaluate)
             # natural selection
             suc = 0
-            for s in s_list:
-                suc += __add_to_archive(s, archive, kdt)
-            if params['multi_mode'] == 'tournament_random' or params['multi_mode'] == 'bandit_niche'  or params['multi_mode'] == 'bandit_parents':
+            for i in range(0, len(list(s_list))):
+                suc += __add_to_archive(s_list[i], to_evaluate_centroid[i], archive, kdt)
+            if params['multi_mode'] == 'tournament_random' or params['multi_mode'] == 'tournament_gp':
                 successes[t_size] += [(suc / params["batch_size"], evals)]
         if params['multi_mode'] == 'bandit_niche' or params['multi_mode'] == 'bandit_parents':
             t_size = opt_tsize(successes, n_niches)
@@ -400,4 +407,5 @@ if __name__ == "__main__":
         for i in range(0, x.shape[0]):
             f += x[i] * x[i] - 10 * math.cos(2 * math.pi * x[i])
         return -f, np.array([xx[0], xx[1]])
+    # CVT-based version
     my_map = compute(dim_map=2, dim_x = 10, n_niches=1500, f=rastrigin)

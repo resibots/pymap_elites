@@ -61,5 +61,13 @@ px = map_elites.default_params.copy()
 px['multi_task'] = True
 px['multi_mode'] = sys.argv[1]
 px['n_size'] = int(sys.argv[2])
+px["dump_period"] = 2000
+
 dim_x = int(sys.argv[3])
-archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=1000, num_evals=2e5, params=px)
+
+
+# CVT-based version
+#archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=1000, num_evals=2e5, params=px)
+tasks = np.random.random((1000, 2))
+centroids = tasks
+archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, centroids=centroids, tasks=tasks, num_evals=2e5, params=px)
