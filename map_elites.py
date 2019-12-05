@@ -45,11 +45,11 @@ import math
 import numpy as np
 import multiprocessing
 from pathlib import Path
-import kinematic_arm
+#----#import kinematic_arm
 import sys
 import random
 from collections import defaultdict
-import GPy
+#----#import GPy
 
 global same_count
 same_count = 0
@@ -292,7 +292,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                     s_list = map(evaluate, to_evaluate)
                 evals += len(to_evaluate)
                 b_evals += len(to_evaluate)
-                for i in range(0, len(s_list)):
+                for i in range(0, len(list(s_list))):
                     __add_to_archive(s_list[i], to_evaluate_centroid[i], archive, kdt)
                 init_count = len(archive)
                 to_evaluate = []
@@ -365,7 +365,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
             b_evals += len(to_evaluate)
             # natural selection
             suc = 0
-            for s in range(0, len(s_list)):
+            for s in range(0, len(list(s_list))):
                 suc += __add_to_archive(s[i], centroids[i], archive, kdt)
             if params['multi_mode'] == 'tournament_random' or params['multi_mode'] == 'tournament_gp':
                 successes[t_size] += [(suc / params["batch_size"], evals)]
