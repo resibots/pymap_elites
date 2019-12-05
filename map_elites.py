@@ -354,13 +354,13 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                     elif params['multi_mode'] == 'bandit_parents':
                         # we select the niche, then the parents according to the niche
                         # (we ignore the x that was already selected)
-                        niche = centroids[np.random.randint(c.shape[0])]
+                        niche = c[np.random.randint(c.shape[0])]
                         parents = []
                         for k in [1,2]:
-                            pp = [archive[keys[np.random.randint(len(keys))]] for p in range(0, t_size)]
+                            pp = [ keys[np.random.randint(len(keys))] for p in range(0, t_size) ]
                             cd = distance.cdist(pp, [niche], 'euclidean')
                             parents += [pp[np.argmin(cd)]]
-                        z = variation(parents[0].x, parents[1].x, archive, params)
+                        z = variation(archive[parents[0]].x, archive[parents[1]].x, archive, params)
                         to_evaluate += [(z, f, niche, params)]
 
             
@@ -375,9 +375,9 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
             suc = 0
             for s in s_list:
                 suc += __add_to_archive(s, archive, kdt)
-            if params['multi_mode'] == 'tournament_random' or params['multi_mode'] == 'tournament_gp':
+            if params['multi_mode'] == 'tournament_random' or params['multi_mode'] == 'bandit_niche'  or params['multi_mode'] == 'bandit_parents':
                 successes[t_size] += [(suc / params["batch_size"], evals)]
-        if params['multi_mode'] == 'bandit_niche':
+        if params['multi_mode'] == 'bandit_niche' or params['multi_mode'] == 'bandit_parents':
             t_size = opt_tsize(successes, n_niches)
         # write archive
         if params['dump_period'] != -1 and b_evals > params['dump_period']:
