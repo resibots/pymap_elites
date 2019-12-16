@@ -280,7 +280,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                     elem_bounded = min(x[i],params["max"][i])
                     elem_bounded = max(elem_bounded,params["min"][i])
                     x_bounded.append(elem_bounded)
-                n = random.randint(0, c.shape[0] - 1)
+                n = np.random.randint(0, c.shape[0])
                 to_evaluate += [(np.array(x_bounded), f, tasks[n], params)]
                 to_evaluate_centroid += [c[n,:]]
             if params['parallel'] == True:
@@ -305,16 +305,18 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                 else:
                     if params['multi_mode'] == 'full':
                         # evaluate on all the niches
-                        for n in c: # for each centroid
-                            to_evaluate += [(z, f, n, params)]
+                        for i in range(0, c.shape[0]): # for each centroid
+                            to_evaluate += [(z, f, tasks[i], params)]
+                            to_evaluate_centroid += [c[i, :]]
                     elif params['multi_mode'] == 'parents':
                         # evaluate on the niche of the parents
                         to_evaluate += [(z, f, x.desc, params)]
                         to_evaluate += [(z, f, y.desc, params)]
                     elif params['multi_mode'] == 'random':
                         # evaluate on a random niche
-                        niche = np.random.random(dim_map)
-                        to_evaluate += [(z, f, niche, params)]
+                        niche = np.random.randint(c.shape[0])
+                        to_evaluate += [(z, f, tasks[niche], params)]
+                        to_evaluate_centroid += [c[niche, :]]
                     elif params['multi_mode'] == 'neighbors':
                         # evaluate on the nearest neighbor of each parent
                         for p in [x, y]:
@@ -359,7 +361,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                         niche = c[np.random.randint(c.shape[0])]
                         parents = []
                         for k in [1,2]:
-                            pp = [ keys[np.random.randint(len(keys))] for p in range(0, t_size) ]
+                            pp = [keys[np.random.randint(len(keys))] for p in range(0, t_size) ]
                             cd = distance.cdist(pp, [niche], 'euclidean')
                             parents += [pp[np.argmin(cd)]]
                             n = random.randint(0, c.shape[0] - 1)
