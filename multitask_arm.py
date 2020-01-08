@@ -65,9 +65,10 @@ px["dump_period"] = 2000
 
 dim_x = int(sys.argv[3])
 
-
 # CVT-based version
-#archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=1000, num_evals=2e5, params=px)
-tasks = np.random.random((1000, 2))
-centroids = tasks
-archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, centroids=centroids, tasks=tasks, num_evals=2e5, params=px)
+archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=1000, num_evals=2e5, params=px, log_file=open('cover_max_mean.dat', 'w'))
+
+# task-based version (random centroids)
+#tasks = np.random.random((1000, 2))
+#centroids = tasks
+#archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, centroids=centroids, tasks=tasks, num_evals=2e5, params=px, log_file='evals_cover_max_mean.dat')

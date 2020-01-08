@@ -233,7 +233,8 @@ def opt_tsize(successes, n_niches):
 def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5, 
             centroids='cvt',
             tasks=[], 
-            params=default_params):
+            params=default_params,
+            log_file=None):
     print(params)
     assert(f != None)
     assert(dim_map != -1)
@@ -305,7 +306,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                 else:
                     if params['multi_mode'] == 'full':
                         # evaluate on all the niches
-                        for i in range(0, c.shape[0]): # for each centroid
+                        for i in range(0, c.shape[0]): # for eac    h centroid
                             to_evaluate += [(z, f, tasks[i], params)]
                             to_evaluate_centroid += [c[i, :]]
                     elif params['multi_mode'] == 'parents':
@@ -342,6 +343,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                         mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
                     elif params['multi_mode'] == 'bandit_niche':
+                        #print("tsize:", t_size)
                         # we select the parents, then we select the niche
                         # tournament using the bandit
                         niches_centroids = []
@@ -397,6 +399,10 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                 n_e += [len(v)]
             print(evals, n_e)
             np.savetxt('t_size.dat', np.array(n_e))
+        if log_file != None:
+            fit_list = np.array([x.fitness for x in archive.values()])
+            log_file.write("{} {} {} {}\n".format(evals, len(archive.keys()), fit_list.max(), fit_list.mean()))
+            log_file.flush()
     __save_archive(archive, evals)
     return archive
 
