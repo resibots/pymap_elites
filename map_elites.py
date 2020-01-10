@@ -344,7 +344,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                         to_evaluate += [(z, f, mn, params)]
                     elif params['multi_mode'] == 'bandit_niche':
                         #print("tsize:", t_size)
-                        # we select the parents, then we select the niche
+                        # we select the parent (a single one), then we select the niche
                         # tournament using the bandit
                         niches_centroids = []
                         niches_tasks = []
@@ -390,6 +390,8 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                 successes[t_size] += [(suc / params["batch_size"], evals)]
         if params['multi_mode'] == 'bandit_niche' or params['multi_mode'] == 'bandit_parents':
             t_size = opt_tsize(successes, n_niches)
+        else:
+            t_size = params['n_size']
         # write archive
         if params['dump_period'] != -1 and b_evals > params['dump_period']:
             __save_archive(archive, evals)
