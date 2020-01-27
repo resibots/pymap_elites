@@ -342,7 +342,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                             niches += [np.random.random(dim_map)]
                         mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
-                    elif params['multi_mode'] == 'bandit_niche':
+                    elif params['multi_mode'] == 'bandit_niche' or params['multi_mode'] == 'tournament':
                         #print("tsize:", t_size)
                         # we select the parent (a single one), then we select the niche
                         # tournament using the bandit
