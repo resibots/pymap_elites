@@ -110,12 +110,12 @@ def scale(x,params):
 
 def variation(x, z, archive, params):
     y = x.copy()
-    for i in range(0,len(y)):
+    for i in range(0, len(y)):
         # iso mutation
-        a = np.random.normal(0, (params["max"][i]-params["min"][i])/300.0, 1)
+        a = np.random.normal(0, 0.01 * (params["max"][i]-params["min"][i]), 1)
         y[i] =  y[i] + a
         # line mutation
-        b = np.random.normal(0, 20*(params["max"][i]-params["min"][i])/300.0, 1)
+        b = np.random.normal(0, 0.2 * (params["max"][i]-params["min"][i])/300.0, 1)
         y[i] =  y[i] + b*(x[i] - z[i])
     y_bounded = []
     for i in range(0,len(y)):
@@ -215,7 +215,7 @@ def opt_tsize(successes, n_niches):
     n = 0
     for v in successes.values():
         n += len(v)
-    v = [1, 10, 50, 100, 500, 1000]
+    v = [1, 10, 50, 100, 500]#, 1000]
     if len(successes.keys()) < len(v):
         return random.choice(v)
     ucb = []
@@ -357,7 +357,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                         to_evaluate += [(z, f, niches_tasks[cd_min], params)]
                         to_evaluate_centroid += [niches_centroids[cd_min]]
 
-                    elif params['multi_mode'] == 'bandit_parents':
+                    elif params['multi_mode'] == 'bandit_parents': # WARNING: NOT TESTED
                         # we select the niche, then the parents according to the niche
                         # (we ignore the x that was already selected)
                         niche = c[np.random.randint(c.shape[0])]
@@ -375,6 +375,27 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                         to_evaluate += [(z, f, niches_tasks[cd_min], params)]
                         to_evaluate_centroid += [centroids[cd_min]]
                         # pareto sort density / challenges vs distance?
+                    elif params['multi_mode'] == 'similarity':
+                        # we need to select the niche first, then the parent because we need to fill empty niches
+                        # (we ignore the x that was already selected)
+                        niche_id = np.random.randint(c.shape[0])
+                        niche = __make_hashable(c[niche_id])
+                        to_evaluate_centroid += [c[niche_id]]
+                        parents = []
+                        if not (niche in archive):
+                           parents += [keys[np.random.randint(len(keys))]]
+                           parents += [keys[np.random.randint(len(keys))]]
+                        else: # we select the parents according to similarity
+                            for k in [1,2]: # 2 parents
+                                pp = [keys[np.random.randint(len(keys))] for p in range(0, t_size) ]
+                                px = [archive[p].x for p in pp]
+                                cd = distance.cdist(px, [archive[niche].x], 'euclidean')[:,0]
+                                fit = np.array([archive[p].fitness for p in pp])
+                                parents += [pp[np.argmin(cd)]]
+                                #print('distance:', cd[np.argmin(cd)], len(pp), np.argmin(cd))
+                            #print(archive[parents[0]].x, archive[parents[1]].x,archive[niche].x)
+                        z = variation(archive[parents[0]].x, archive[parents[1]].x, archive, params)
+                        to_evaluate += [(z, f, tasks[niche_id], params)]
             # parallel evaluation of the fitness
             if params['parallel'] == True:
                 s_list = pool.map(evaluate, to_evaluate)
@@ -388,7 +409,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                 suc += __add_to_archive(s_list[i], to_evaluate_centroid[i], archive, kdt)
             if params['multi_mode'] == 'tournament_random' or params['multi_mode'] == 'tournament_gp':
                 successes[t_size] += [(suc / params["batch_size"], evals)]
-        if params['multi_mode'] == 'bandit_niche' or params['multi_mode'] == 'bandit_parents':
+        if params['multi_mode'] == 'bandit_niche' or params['multi_mode'] == 'bandit_parents' or params['multi_mode'] == 'similarity':
             t_size = opt_tsize(successes, n_niches)
         else:
             t_size = params['n_size']

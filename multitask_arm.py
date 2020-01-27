@@ -55,6 +55,8 @@ def arm(angles, features):
     f = -np.linalg.norm(ef - target)
     return f, features
 
+dim_x = int(sys.argv[3])
+
 # dim_map, dim_x, function
 # archive = compute(dim_map=2, dim_x=6, f=rastrigin, n_niches=5000, n_gen=2500)
 px = map_elites.default_params.copy()
@@ -62,11 +64,13 @@ px['multi_task'] = True
 px['multi_mode'] = sys.argv[1]
 px['n_size'] = int(sys.argv[2])
 px["dump_period"] = 2000
+px["min"] = [0.]*dim_x
+px["max"] = [1.]*dim_x
 
-dim_x = int(sys.argv[3])
+
 
 # CVT-based version
-archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=1000, num_evals=2e5, params=px, log_file=open('cover_max_mean.dat', 'w'))
+archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=5000, num_evals=2e5, params=px, log_file=open('cover_max_mean.dat', 'w'))
 
 # task-based version (random centroids)
 #tasks = np.random.random((1000, 2))
