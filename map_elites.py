@@ -112,10 +112,10 @@ def variation(x, z, archive, params):
     y = x.copy()
     for i in range(0, len(y)):
         # iso mutation
-        a = np.random.normal(0, 0.01 * (params["max"][i]-params["min"][i]), 1)
+        a = np.random.normal(0, (params["max"][i]-params["min"][i])/300.0, 1)
         y[i] =  y[i] + a
         # line mutation
-        b = np.random.normal(0, 0.2 * (params["max"][i]-params["min"][i])/300.0, 1)
+        b = np.random.normal(0, 20*(params["max"][i]-params["min"][i])/300.0, 1)
         y[i] =  y[i] + b*(x[i] - z[i])
     y_bounded = []
     for i in range(0,len(y)):
@@ -342,7 +342,7 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                             niches += [np.random.random(dim_map)]
                         mn = min(niches, key=lambda xx: np.linalg.norm(xx - x.desc))
                         to_evaluate += [(z, f, mn, params)]
-                    elif params['multi_mode'] == 'bandit_niche':
+                    elif params['multi_mode'] == 'bandit_niche' or params['multi_mode'] == 'tournament':
                         #print("tsize:", t_size)
                         # we select the parent (a single one), then we select the niche
                         # tournament using the bandit

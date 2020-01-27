@@ -39,8 +39,10 @@ def test_cma(centroids_fname, dim):
         es_vector += [cma.CMAEvolutionStrategy(dim * [0.5], 0.5, opts)]
 
     total_evals = 0
+    log = open('cover_max_mean.dat', 'w')
     while total_evals < max_evals:
         result_file = open('archive_'+ str(total_evals) + '.dat', 'w')
+        archive = []
         for c in range(0, centroids.shape[0]):
             centroid = centroids[c, :]
             def func(angles):
@@ -51,10 +53,18 @@ def test_cma(centroids_fname, dim):
             # save to file
             xopt = es_vector[c].result[0]
             xval = es_vector[c].result[1]
+            # save
+            archive += [-xval]
+            # write
             result_file.write(str(-xval) + ' ')
             write_array(centroid, result_file)
             write_array(xopt, result_file)
             result_file.write('\n')
+        mean = np.mean(archive)
+        max_v = max(archive)
+        coverage = len(archive)
+        log.write(str(total_evals) + ' ' + str(coverage) + ' ' + str(max_v) + ' ' + str(mean) + '\n')
+        log.flush()
         print(total_evals)
 
 test_cma(sys.argv[1], int(sys.argv[2]))

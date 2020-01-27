@@ -70,7 +70,7 @@ px["max"] = [1.]*dim_x
 
 
 # CVT-based version
-archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=5000, num_evals=2e5, params=px, log_file=open('cover_max_mean.dat', 'w'))
+archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=5000, num_evals=1e6, params=px, log_file=open('cover_max_mean.dat', 'w'))
 
 # task-based version (random centroids)
 #tasks = np.random.random((1000, 2))
