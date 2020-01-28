@@ -45,19 +45,53 @@ import sys
 import pyhexapod.simulator as simulator
 import pycontrollers.hexapod_controller as ctrl
 import pybullet
+import time
 
-def hexapod(param, features):
-    simu = simulator.HexapodSimulator(gui=False)
-    controller = ctrl.HexapodController(ctrl)
-    for i in range(0, int(3./simu.dt)): # seconds
+
+def hexapod(x, features):
+    t0 = time.perf_counter()
+    urdf_file = features[1]
+    simu = simulator.HexapodSimulator(gui=False, urdf=urdf_file)
+    controller = ctrl.HexapodController(x)
+    dead = False
+    fit = -1e10
+    steps = 3. / simu.dt
+    i = 0
+    while i < steps and not dead:
         simu.step(controller)
-    return f, features
+        p = simu.get_pos()[0] 
+        a = pybullet.getEulerFromQuaternion(simu.get_pos()[1])
+        out_of_corridor = abs(p[1]) > 0.5
+        out_of_angles = abs(a[0]) > math.pi/8 or abs(a[1]) > math.pi/8 or abs(a[2]) > math.pi/8
+        if out_of_angles or out_of_corridor:
+            dead = True
+        i += 1
+    fit = p[0]
+    #print(time.perf_counter() - t0, " ms", '=>', fit)
+    return fit, features    
 
-# dim_map, dim_x, function
-# archive = compute(dim_map=2, dim_x=6, f=rastrigin, n_niches=5000, n_gen=2500)
+
+def load(directory, k):
+    tasks = []
+    centroids = []
+    for i in range(0, k):
+        centroid = np.loadtxt(directory + '/lengthes_' + str(i) + '.txt')
+        urdf_file = directory + '/pexod_' + str(i) + '.urdf'
+        centroids += [centroid]
+        tasks += [(centroid, urdf_file)]
+    return np.array(centroids), tasks
+
+print('loading files...', end='')
+centroids, tasks = load('urdf', 2000)
+print('data loaded')
+dim_x = 36
+
 px = map_elites.default_params.copy()
 px['multi_task'] = True
 px['multi_mode'] = sys.argv[1]
-px['n_size'] = int(sys.argv[2])
-dim_x = int(sys.argv[3])
-archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=hexapod, n_niches=1000, num_evals=2e5, params=px)
+px['n_size'] = 100
+px['min'] = [0.] * dim_x
+px['max'] = [1.] * dim_x
+
+
+archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=hexapod, centroids=centroids, tasks=tasks, num_evals=2e5, params=px, log_file=open('cover_max_mean.dat', 'w'))

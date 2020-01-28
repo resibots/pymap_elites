@@ -352,7 +352,8 @@ def compute(dim_map=-1, dim_x=-1, f=None, n_niches=1000, num_evals=1e5,
                             n = np.random.randint(c.shape[0])
                             niches_centroids += [c[n, :]]
                             niches_tasks += [tasks[n]]
-                        cd = distance.cdist(niches_centroids, [x.desc], 'euclidean')
+                        #print('xcentroid:', x.centroid)
+                        cd = distance.cdist(niches_centroids, [x.centroid], 'euclidean')
                         cd_min = np.argmin(cd)
                         to_evaluate += [(z, f, niches_tasks[cd_min], params)]
                         to_evaluate_centroid += [niches_centroids[cd_min]]
