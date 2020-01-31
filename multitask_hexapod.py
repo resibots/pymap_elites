@@ -82,7 +82,7 @@ def load(directory, k):
     return np.array(centroids), tasks
 
 print('loading files...', end='')
-centroids, tasks = load('urdf', 2000)
+centroids, tasks = load(sys.argv[2], 2000)
 print('data loaded')
 dim_x = 36
 
@@ -94,4 +94,4 @@ px['min'] = [0.] * dim_x
 px['max'] = [1.] * dim_x
 
 
-archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=hexapod, centroids=centroids, tasks=tasks, num_evals=2e5, params=px, log_file=open('cover_max_mean.dat', 'w'))
+archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=hexapod, centroids=centroids, tasks=tasks, num_evals=1e6, params=px, log_file=open('cover_max_mean.dat', 'w'))
