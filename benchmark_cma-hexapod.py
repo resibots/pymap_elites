@@ -54,7 +54,7 @@ def evaluate(y):
 def test_cma(urdf_directory, dim):
 
     print('loading files...', end='')
-    centroids, tasks = load(urdf_directory, 2000)
+    centroids, tasks = load(urdf_directory, 2)
     print('data loaded')
     
     opts = cma.CMAOptions()
@@ -86,6 +86,7 @@ def test_cma(urdf_directory, dim):
             def func(angles):
                 return hexapod(angles, task)[0]
             solutions = es_vector[c].ask()
+#            print(len(solutions))# pop =14
             s_list = pool.map(evaluate, [(x, task, hexapod) for x in solutions])
             es_vector[c].tell(solutions, s_list)
             total_evals += len(solutions)
