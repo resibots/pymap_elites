@@ -4,6 +4,9 @@ import brewer2mpl
 import numpy as np
 import sys
 import math
+import gzip
+import matplotlib.gridspec as gridspec
+
 from collections import defaultdict
 from matplotlib import pyplot as plt
 
@@ -17,109 +20,69 @@ params = {
     'xtick.labelsize': 10,
     'ytick.labelsize': 10,
     'text.usetex': False,
-    'figure.figsize': [3.5, 4.5]
+    'figure.figsize': [6, 8]
 }
 rcParams.update(params)
 
+def customize_axis(ax):
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.get_xaxis().tick_bottom()
+    ax.tick_params(axis='y', length=0)
+    #ax.get_yaxis().tick_left()
 
-
-def __make_hashable(array):
-    return tuple(map(float, array))
-
-def get_evals(dir):
-    d_list = glob.glob(dir + '/*')
-    f_list = glob.glob(d_list[0] + '/*archive_*.dat')
-    evals = []
-    for i in f_list:
-        e = int(i.split('_')[-1].split('.')[0])
-        evals += [e]
-    evals = sorted(evals)
-    return evals
-
-def load_file(fname, dim):
-    print("loading ", fname, " dim=", dim)
-    d = np.loadtxt(fname)
-    data = {}
-    # format: [fitness, centroid, desc, x]
-    for i in range(0, d.shape[0]):
-        n = __make_hashable(d[i][1:dim+1])
-        data[n] = d[i][0]
-    return data
-
-# return a dictionnary of lists with the average fitness
-def load_treatment(dir, dim):
-    evals = get_evals(dir)
-    d_list = glob.glob(dir + '/*')
-    data = {}
-    for i in evals:
-        data[i] = []
-        for d in d_list:
-            x = load_file(d +  "/archive_" + str(i) + ".dat", dim)
-            keys = list(x.keys())
-            f = 0
-            for j in keys:
-                f += x[j]
-            f /= len(x)
-            data[i] += [f]
-    return data
-    
-# process all the replicates of a single treatment
-def process_treatment(data):
-    keys = list(data)
-    median = np.zeros(len(keys))
-    perc_25 = np.zeros(len(keys))
-    perc_75 = np.zeros(len(keys))
-    i = 0
-    for k in keys:
-        median[i] = np.median(data[k])
-        perc_25[i] = np.percentile(data[k], 5)
-        perc_75[i] = np.percentile(data[k], 95)
-        i += 1
-    return median, perc_25, perc_75
-
+    # offset the spines
+    for spine in ax.spines.values():
+     spine.set_position(('outward', 5))
+    # put the grid behind
+    ax.set_axisbelow(True)
+    ax.grid(axis='y', color="0.9", linestyle='--', linewidth=1)
 
 fig = figure(frameon=False) # no frame
-ax1 = fig.add_subplot(111)
-ax1.grid(axis='y', color="0.9", linestyle='--', linewidth=1)
-plt.box(False)
-plt.ticklabel_format(axis='both', style='sci', scilimits=(-2,2))
 
+
+#plt.box(False)
+#plt.ticklabel_format(axis='both', style='sci', scilimits=(-2,2))
+
+
+ax1 = fig.add_subplot(311)
 
 k = 0
-dim = 2
 for i in sys.argv[1:]:
-    print(i)
-    data = load_treatment(i, dim)
-    m, p25, p75 = process_treatment(data)
-    x = list(data.keys())
-    ax1.fill_between(x, p25, p75, alpha=0.25, linewidth=0, color=colors[k%len(colors)])
-    if ('mt-map-elites' in i) or ('cma' in i) or ('sampling' in i):
-        ax1.plot(x, m, linewidth=2, color=colors[k%len(colors)], label=i)
-    else:
-        ax1.plot(x, m, '--', linewidth=1, color=colors[k%len(colors)], label=i)
+    data = np.loadtxt(i)
+    ax1.plot(data[:,0], data[:, 1], '-', linewidth=2, color=colors[k], label=i)
     k += 1
-# now all plot function should be applied to ax
-#ax.fill_between(x, perc_25_low_mut, perc_75_low_mut, alpha=0.25, linewidth=0, color=colors[0]) 
-#ax.fill_between(x, perc_25_high_mut, perc_75_high_mut, alpha=0.25, linewidth=0, color=colors[1])
-#ax.plot(x, med_low_mut, linewidth=2, color=colors[0])
-#ax.plot(x, med_high_mut, linewidth=2, linestyle='--', color=colors[1])
+ax1.set_title('Coverage')
+customize_axis(ax1)
 
-# change xlim to set_xlim
-#ax1.set_xlim(0, 50000)
-#ax2.set_xlim(0, 50000)
+ax2 = fig.add_subplot(312)
+k = 0
+for i in sys.argv[1:]:
+    data = np.loadtxt(i)
+    ax2.plot(data[:,0], data[:, 3], '-', linewidth=2, color=colors[k], label=i)
+    k += 1
+ax2.set_title('Mean fitness')
 
-ax1.set_ylim(-0.5, -0.29)
+customize_axis(ax2)
 
-#change xticks to set_xticks
-ax1.set_yticks(np.arange(-0.5, -0.29, 0.05))
+
+ax3 = fig.add_subplot(313)
+ax3.grid(axis='y', color="0.9", linestyle='--', linewidth=1)
+k = 0
+for i in sys.argv[1:]:
+    data = np.loadtxt(i)
+    ax3.plot(data[:,0], data[:, 2], '-', linewidth=2, color=colors[k], label=i)
+    k += 1
+ax3.set_title('Max fitness')
+
+customize_axis(ax3)
 
 legend = ax1.legend(loc=4)#bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=(3))
 frame = legend.get_frame()
 frame.set_facecolor('0.9')
 frame.set_edgecolor('1.0')
 
-#frame = legend.get_frame()
-#frame.set_facecolor('1.0')
-#frame.set_edgecolor('1.0')
-
-fig.savefig('progress_dim' + str(dim) + '.pdf')
+fig.tight_layout()
+fig.savefig('progress.pdf')
+fig.savefig('progress.svg')
