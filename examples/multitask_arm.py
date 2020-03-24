@@ -38,60 +38,45 @@
 #| had knowledge of the CeCILL license and that you accept its terms.
 # 
 
-import map_elites
+import kinematic_arm
 import math
 import numpy as np
 import sys
-import pyhexapod.simulator as simulator
-import pycontrollers.hexapod_controller as ctrl
-import pybullet
-import time
 
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-def hexapod(x, features):
-    t0 = time.perf_counter()
-    urdf_file = features[1]
-    simu = simulator.HexapodSimulator(gui=False, urdf=urdf_file)
-    controller = ctrl.HexapodController(x)
-    dead = False
-    fit = -1e10
-    steps = 3. / simu.dt
-    i = 0
-    while i < steps and not dead:
-        simu.step(controller)
-        p = simu.get_pos()[0] 
-        a = pybullet.getEulerFromQuaternion(simu.get_pos()[1])
-        out_of_corridor = abs(p[1]) > 0.5
-        out_of_angles = abs(a[0]) > math.pi/8 or abs(a[1]) > math.pi/8 or abs(a[2]) > math.pi/8
-        if out_of_angles or out_of_corridor:
-            dead = True
-        i += 1
-    fit = p[0]
-    #print(time.perf_counter() - t0, " ms", '=>', fit)
-    return fit, features    
+import map_elites.multitask as mt_map_elites
+import map_elites.common as cm_map_elites
 
+def arm(angles, features):
+    angular_range = features[0] / len(angles)
+    lengths = np.ones(len(angles)) * features[1] / len(angles)
+    target = 0.5 * np.ones(2)
+    a = kinematic_arm.Arm(lengths)
+    # command in 
+    command = (angles - 0.5) * angular_range * math.pi * 2
+    ef, _ = a.fw_kinematics(command)
+    f = -np.linalg.norm(ef - target)
+    return f, features
 
-def load(directory, k):
-    tasks = []
-    centroids = []
-    for i in range(0, k):
-        centroid = np.loadtxt(directory + '/lengthes_' + str(i) + '.txt')
-        urdf_file = directory + '/pexod_' + str(i) + '.urdf'
-        centroids += [centroid]
-        tasks += [(centroid, urdf_file)]
-    return np.array(centroids), tasks
+dim_x = int(sys.argv[1])
 
-print('loading files...', end='')
-centroids, tasks = load(sys.argv[2], 2000)
-print('data loaded')
-dim_x = 36
-
-px = map_elites.default_params.copy()
+# dim_map, dim_x, function
+px = cm_map_elites.default_params.copy()
 px['multi_task'] = True
-px['multi_mode'] = sys.argv[1]
-px['n_size'] = 100
-px['min'] = [0.] * dim_x
-px['max'] = [1.] * dim_x
+px['multi_mode'] = 'bandit_niche'
+px['n_size'] = 0 # ignored if bandit_niche
+px["dump_period"] = 2000
+px["min"] = [0.] * dim_x
+px["max"] = [1.] * dim_x
 
 
-archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=hexapod, centroids=centroids, tasks=tasks, num_evals=1e6, params=px, log_file=open('cover_max_mean.dat', 'w'))
+
+# CVT-based version
+archive = mt_map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, n_niches=5000, num_evals=1e6, params=px, log_file=open('cover_max_mean.dat', 'w'))
+
+# task-based version (random centroids)
+#tasks = np.random.random((1000, 2))
+#centroids = tasks
+#archive = map_elites.compute(dim_map=2, dim_x=dim_x, f=arm, centroids=centroids, tasks=tasks, num_evals=2e5, params=px, log_file='evals_cover_max_mean.dat')
