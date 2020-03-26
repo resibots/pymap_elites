@@ -71,8 +71,8 @@ dim_x = int(sys.argv[1])
 # dim_map, dim_x, function
 px = cm_map_elites.default_params.copy()
 px["dump_period"] = 2000
-px["min"] = [0.] * dim_x
-px["max"] = [1.] * dim_x
+px["min"] = np.zeros(dim_x)
+px["max"] = np.ones(dim_x)
 px["parallel"] = False
 
 n_tasks = 5000

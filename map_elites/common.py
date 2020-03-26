@@ -68,8 +68,8 @@ default_params = \
         # do we cache the result of CVT and reuse?
         "cvt_use_cache": True,
         # min/max of parameters
-        "min": [0]*15,
-        "max": [1]*15,
+        "min": np.zeros(15),
+        "max": np.ones(15),
         # iso variation
         "iso_sigma": 1./300.,
         "line_sigma": 20./300.
@@ -82,20 +82,12 @@ class Species:
         self.centroid = centroid
 
 def scale(x,params):
-    x_scaled = []
-    for i in range(0,len(x)) :
-        x_scaled.append(x[i] * (params["max"][i] - params["min"][i]) + params["min"][i])
-    return np.array(x_scaled)
-
+    return x * (params["max"] - params["min"]) + params["min"] 
+    
 def random_individual(dim_x, params):
     x = np.random.random(dim_x)
     x = scale(x, params)
-    x_bounded = []
-    for i in range(0,len(x)):
-        elem_bounded = min(x[i],params["max"][i])
-        elem_bounded = max(elem_bounded,params["min"][i])
-        x_bounded.append(elem_bounded)
-    return x_bounded
+    return x.clip(params["min"], params["max"])
 
 
 def variation_xy(x, z, params):
