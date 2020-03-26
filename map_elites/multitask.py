@@ -136,8 +136,7 @@ def compute(dim_map=-1,
     when using the distance, use the bandit to select the tournament size (cf paper):
 
     Mouret and Maguire (2020). Quality Diversity for Multitask Optimization
-    Proc. of GECCO.
-
+    Proceedings of ACM GECCO.
     """
     print(params)
     assert(f != None)
@@ -180,6 +179,7 @@ def compute(dim_map=-1,
         if n_evals == 0 or init_count<=params['random_init'] * n_tasks:
             # initialize the map with random individuals
             for i in range(0, params['random_init_batch']):
+                # create a random individual
                 x = cm.random_individual(dim_x, params)
                 # we take a random task
                 n = np.random.randint(0, n_tasks)
@@ -219,9 +219,7 @@ def compute(dim_map=-1,
         if params['dump_period'] != -1 and b_evals > params['dump_period']:
             cm.__save_archive(archive, n_evals)
             b_evals = 0
-            n_e = []
-            for v in successes.values():
-                n_e += [len(v)]
+            n_e = [len(v) for v in successes.values()]
             print(n_evals, n_e)
             np.savetxt('t_size.dat', np.array(n_e))
         if log_file != None:
