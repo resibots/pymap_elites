@@ -46,9 +46,27 @@ from sklearn.neighbors import KDTree
 
 from map_elites import common as cm
 
+
+
+def __add_to_archive(s, centroid, archive, kdt):
+    niche_index = kdt.query([centroid], k=1)[1][0][0]
+    niche = kdt.data[niche_index]
+    n = cm.make_hashable(niche)
+    s.centroid = n
+    if n in archive:
+        c = s.challenges + 1
+        if s.fitness > archive[n].fitness:
+            archive[n] = s
+            return 1
+        return 0
+    else:
+        archive[n] = s
+        return 1
+
+
 # evaluate a single vector (x) with a function f and return a species
 # t = vector, function
-def evaluate(t):
+def __evaluate(t):
     z, f = t  # evaluate z with function f
     fit, desc = f(z)
     return cm.Species(z, desc, fit)
@@ -59,7 +77,7 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=cm.default_para
     pool = multiprocessing.Pool(num_cores)
 
     # create the CVT
-    c = cm.__cvt(n_niches, dim_map,
+    c = cm.cvt(n_niches, dim_map,
               params['cvt_samples'], params['cvt_use_cache'])
     kdt = KDTree(c, leaf_size=30, metric='euclidean')
     cm.__write_centroids(c)
@@ -75,21 +93,15 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=cm.default_para
         if g == 0:  # random initialization
             while(init_count<=params['random_init'] * n_niches):
                 for i in range(0, params['random_init_batch']):
-                    x = np.random.random(dim_x)
-                    x = cm.scale(x, params)
-                    x_bounded = []
-                    for i in range(0,len(x)):
-                        elem_bounded = min(x[i],params["max"][i])
-                        elem_bounded = max(elem_bounded,params["min"][i])
-                        x_bounded.append(elem_bounded)
-                    to_evaluate += [(np.array(x_bounded), f)]
+                    x = cm.random_individual(dim_x, params)
+                    to_evaluate += [(np.array(x), f)]
                 if params['parallel'] == True:
-                    s_list = pool.map(evaluate, to_evaluate)
+                    s_list = pool.map(__evaluate, to_evaluate)
                 else:
-                    s_list = map(evaluate, to_evaluate)
+                    s_list = map(__evaluate, to_evaluate)
                 evals += len(to_evaluate)
                 for s in s_list:
-                    cm.__add_to_archive(s, s.desc, archive, kdt)
+                    __add_to_archive(s, s.desc, archive, kdt)
                 init_count = len(archive)
                 to_evaluate = []
         else:  # variation/selection loop
@@ -102,13 +114,13 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=cm.default_para
                 to_evaluate += [(z, f)]
             # parallel evaluation of the fitness
             if params['parallel'] == True:
-                s_list = pool.map(evaluate, to_evaluate)
+                s_list = pool.map(__evaluate, to_evaluate)
             else:
-                s_list = map(evaluate, to_evaluate)
+                s_list = map(__evaluate, to_evaluate)
             evals += len(to_evaluate)
             # natural selection
             for s in s_list:
-                cm.__add_to_archive(s, s.desc, archive, kdt)
+                __add_to_archive(s, s.desc, archive, kdt)
         # write archive
         if g % params['dump_period'] == 0 and params['dump_period'] != -1:
             print("generation:", g)

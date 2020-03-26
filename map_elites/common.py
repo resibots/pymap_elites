@@ -74,18 +74,27 @@ default_params = \
         "multi_mode": 'full'
     }
 class Species:
-    def __init__(self, x, desc, fitness):
+    def __init__(self, x, desc, fitness, centroid=None):
         self.x = x
         self.desc = desc
         self.fitness = fitness
-        self.centroid = None
-        self.challenges = 0
+        self.centroid = centroid
 
 def scale(x,params):
     x_scaled = []
     for i in range(0,len(x)) :
         x_scaled.append(x[i] * (params["max"][i] - params["min"][i]) + params["min"][i])
     return np.array(x_scaled)
+
+def random_individual(dim_x, params):
+    x = np.random.random(dim_x)
+    x = scale(x, params)
+    x_bounded = []
+    for i in range(0,len(x)):
+        elem_bounded = min(x[i],params["max"][i])
+        elem_bounded = max(elem_bounded,params["min"][i])
+        x_bounded.append(elem_bounded)
+    return x_bounded
 
 
 def variation_xy(x, z, params):
@@ -124,7 +133,7 @@ def __write_centroids(centroids):
             f.write('\n')
 
 
-def __cvt(k, dim, samples, cvt_use_cache=True):
+def cvt(k, dim, samples, cvt_use_cache=True):
     # check if we have cached values
     fname = __centroids_filename(k, dim)
     if cvt_use_cache:
@@ -138,12 +147,21 @@ def __cvt(k, dim, samples, cvt_use_cache=True):
     k_means = KMeans(init='k-means++', n_clusters=k,
                      n_init=1, n_jobs=-1, verbose=1)#,algorithm="full")
     k_means.fit(x)
+    __write_centroids(k_means.cluster_centers_)
+
     return k_means.cluster_centers_
 
 
-def __make_hashable(array):
+def make_hashable(array):
     return tuple(map(float, array))
 
+
+def parallel_eval(evaluate_function, to_evaluate, pool, params):
+    if params['parallel'] == True:
+        s_list = pool.map(evaluate_function, to_evaluate)
+    else:
+        s_list = map(evaluate_function, to_evaluate)
+    return list(s_list)
 
 # format: fitness, centroid, desc, genome \n
 # fitness, centroid, desc and x are vectors
@@ -159,19 +177,3 @@ def __save_archive(archive, gen):
             write_array(k.desc, f)
             write_array(k.x, f)
             f.write("\n")
-
-
-def __add_to_archive(s, centroid, archive, kdt):
-    niche_index = kdt.query([centroid], k=1)[1][0][0]
-    niche = kdt.data[niche_index]
-    n = __make_hashable(niche)
-    s.centroid = n
-    if n in archive:
-        c = s.challenges + 1
-        if s.fitness > archive[n].fitness:
-            archive[n] = s
-            return 1
-        return 0
-    else:
-        archive[n] = s
-        return 1
