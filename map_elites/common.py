@@ -82,6 +82,8 @@ class Species:
         self.centroid = centroid
 
 def scale(x,params):
+    assert(params["max"].shape[0] >= x.shape[0])
+    assert(params["min"].shape[0] >= x.shape[0])
     return x * (params["max"] - params["min"]) + params["min"] 
     
 def random_individual(dim_x, params):
@@ -91,6 +93,9 @@ def random_individual(dim_x, params):
 
 
 def variation_xy(x, z, params):
+    assert(x.shape == z.shape)
+    assert(params["max"].shape[0] >= x.shape[0])
+    assert(params["min"].shape[0] >= x.shape[0])
     p_max = np.array(params["max"])
     p_min = np.array(params["min"])
     a = np.random.normal(0, params["iso_sigma"] * (p_max - p_min), size=len(x))
