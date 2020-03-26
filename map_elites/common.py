@@ -99,6 +99,7 @@ def random_individual(dim_x, params):
 
 def variation_xy(x, z, params):
     y = x.copy()
+    # TODO vectorize this: this takes a lot of time! (6% of our runtime)
     for i in range(0, len(y)):
         # iso mutation
         a = np.random.normal(0, (params["max"][i]-params["min"][i])/300.0, 1)

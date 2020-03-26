@@ -72,7 +72,13 @@ def __evaluate(t):
     return cm.Species(z, desc, fit)
 
 # map-elites algorithm (CVT variant)
-def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=cm.default_params, log_file=None):
+def compute(dim_map, dim_x, f, 
+    n_niches=1000, n_gen=1000, 
+    params=cm.default_params, 
+    log_file=None, 
+    variation_operator=cm.variation):
+
+    # setup the parallel processing pool
     num_cores = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(num_cores)
 
@@ -110,7 +116,7 @@ def compute(dim_map, dim_x, f, n_niches=1000, n_gen=1000, params=cm.default_para
                 # parent selection
                 x = archive[keys[np.random.randint(len(keys))]]
                 # copy & add variation
-                z = cm.variation(x.x, archive, params)
+                z = variation_operator(x.x, archive, params)
                 to_evaluate += [(z, f)]
             # parallel evaluation of the fitness
             if params['parallel'] == True:

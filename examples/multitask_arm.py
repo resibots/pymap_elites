@@ -73,6 +73,7 @@ px = cm_map_elites.default_params.copy()
 px["dump_period"] = 2000
 px["min"] = [0.] * dim_x
 px["max"] = [1.] * dim_x
+px["parallel"] = False
 
 n_tasks = 5000
 dim_map = 2

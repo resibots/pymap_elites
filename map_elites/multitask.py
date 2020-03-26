@@ -109,8 +109,9 @@ def select_niche(x, z, f, centroids, tasks, t_size, params, use_distance=False):
         # the size of the tournament depends on the bandit algorithm
         niches_centroids = []
         niches_tasks = [] # TODO : use a kd-tree
+        rand = np.random.randint(centroids.shape[0], size=t_size)
         for p in range(0, t_size):
-            n = np.random.randint(centroids.shape[0])
+            n = rand[p]
             niches_centroids += [centroids[n, :]]
             niches_tasks += [tasks[n]]
         cd = distance.cdist(niches_centroids, [x.centroid], 'euclidean')
@@ -125,6 +126,7 @@ def compute(dim_map=-1,
             num_evals=1e5, 
             centroids=[],
             tasks=[], 
+            variation_operator=cm.variation,
             params=cm.default_params,
             log_file=None):
     """Multi-task MAP-Elites
@@ -191,12 +193,13 @@ def compute(dim_map=-1,
         else:  
             # main variation/selection loop
             keys = list(archive.keys())
+            # we do all the randint together because randint is slow
+            rand = np.random.randint(len(keys), size=params['batch_size'])
             for n in range(0, params['batch_size']):
                 # parent selection
-                x = archive[keys[np.random.randint(len(keys))]]
-                y = archive[keys[np.random.randint(len(keys))]]
+                x = archive[keys[rand[n]]]
                 # copy & add variation
-                z = cm.variation_xy(x.x, y.x, params)
+                z = cm.variation(x.x, archive, params)
                 # different modes for multi-task (to select the niche)
                 to_evaluate += select_niche(x, z, f, centroids, tasks, t_size, params, use_distance)
             # parallel evaluation of the fitness
