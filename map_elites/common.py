@@ -70,8 +70,9 @@ default_params = \
         # min/max of parameters
         "min": [0]*15,
         "max": [1]*15,
-        "multi_task": False,
-        "multi_mode": 'full'
+        # iso variation
+        "iso_sigma": 1./300.,
+        "line_sigma": 20./300.
     }
 class Species:
     def __init__(self, x, desc, fitness, centroid=None):
@@ -98,21 +99,14 @@ def random_individual(dim_x, params):
 
 
 def variation_xy(x, z, params):
-    y = x.copy()
-    # TODO vectorize this: this takes a lot of time! (6% of our runtime)
-    for i in range(0, len(y)):
-        # iso mutation
-        a = np.random.normal(0, (params["max"][i]-params["min"][i])/300.0, 1)
-        y[i] =  y[i] + a
-        # line mutation
-        b = np.random.normal(0, 20*(params["max"][i]-params["min"][i])/300.0, 1)
-        y[i] =  y[i] + b*(x[i] - z[i])
-    y_bounded = []
-    for i in range(0,len(y)):
-        elem_bounded = min(y[i],params["max"][i])
-        elem_bounded = max(elem_bounded,params["min"][i])
-        y_bounded.append(elem_bounded)
-    return np.array(y_bounded)
+    p_max = np.array(params["max"])
+    p_min = np.array(params["min"])
+    a = np.random.normal(0, params["iso_sigma"] * (p_max - p_min), size=len(x))
+    b = np.random.normal(0, params["line_sigma"] * (p_max - p_min), size=len(x))
+    y = x.copy() + a + b * (x - z)
+    y = np.clip(y, p_min, p_max)
+    return y
+
 
 def variation(x, archive, params):
   keys = list(archive.keys())
