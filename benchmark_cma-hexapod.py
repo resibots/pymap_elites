@@ -78,7 +78,7 @@ def test_cma(urdf_directory, dim):
     total_evals = 0
     log = open('cover_max_mean.dat', 'w')
     while total_evals < max_evals:
-        result_file = open('archive_'+ str(total_evals) + '.dat', 'w')
+        #result_file = open('archive_'+ str(total_evals) + '.dat', 'w')
         archive = []
         for c in range(0, centroids.shape[0]):
             centroid = centroids[c, :]
@@ -95,10 +95,10 @@ def test_cma(urdf_directory, dim):
             # save
             archive += [-xval]
             # write
-            result_file.write(str(-xval) + ' ')
-            write_array(centroid, result_file)
-            write_array(xopt, result_file)
-            result_file.write('\n')
+            #result_file.write(str(-xval) + ' ')
+            #write_array(centroid, result_file)
+            #write_array(xopt, result_file)
+            #result_file.write('\n')
         mean = np.mean(archive)
         max_v = max(archive)
         coverage = len(archive)
