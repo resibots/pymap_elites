@@ -77,7 +77,9 @@ def compute(dim_map, dim_x, f,
     params=cm.default_params, 
     log_file=None, 
     variation_operator=cm.variation):
-
+     """CVT MAP-Elites
+       Vassiliades V, Chatzilygeroudis K, Mouret JB. Using centroidal voronoi tessellations to scale up the multidimensional archive of phenotypic elites algorithm. IEEE Transactions on Evolutionary Computation. 2017 Aug 3;22(4):623-30.
+    """
     # setup the parallel processing pool
     num_cores = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(num_cores)
