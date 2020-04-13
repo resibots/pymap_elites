@@ -34,7 +34,7 @@ If you use this code in a scientific paper, please cite:
 ## Basic usage
 (you need to have the map_elites module map_elites in your Python path)
 
-```
+```python
 import map_elites.cvt as cvt_map_elites
 
 archive = cvt_map_elites.compute(2, 6, rastrigin, n_niches=5000, n_gen=2500)
