@@ -144,7 +144,9 @@ def compute(dim_map=-1,
     print(centroids, tasks)
     # handle the arguments
     use_distance = False
-    if tasks == [] and centroids != []:
+    if tasks != [] and centroids != []:
+        use_distance = True
+    elif tasks == [] and centroids != []:
         # if no task, we use the centroids as tasks
         tasks = centroids
         use_distance = True
