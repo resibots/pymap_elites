@@ -155,12 +155,12 @@ def load_centroids(filename):
     points = np.loadtxt(filename)
     return points
 
-def plot_cvt(ax, centroids, fit, desc, x,dim1,dim2):
+def plot_cvt(ax, centroids, fit, desc, x,dim1,dim2, min_fit, max_fit):
     # compute Voronoi tesselation
     print("Voronoi...")
     vor = Voronoi(centroids[:,0:2])
     regions, vertices = voronoi_finite_polygons_2d(vor)
-    norm = matplotlib.colors.Normalize(vmin=min(fit), vmax=max(fit))
+    norm = matplotlib.colors.Normalize(vmin=min_fit, vmax=max_fit)
     print("KD-Tree...")
     kdt = KDTree(centroids, leaf_size = 30, metric = 'euclidean')
 
@@ -191,9 +191,12 @@ if __name__ == "__main__":
 
     centroids = load_centroids(sys.argv[1])
     dim_x = 24
-    fit, beh, x = load_data(sys.argv[2], centroids.shape[1],dim_x)
+    fit1, beh, x = load_data(sys.argv[2], centroids.shape[1],dim_x)
+    #fit2, beh, x = load_data(sys.argv[3], centroids.shape[1],dim_x)
+    fit = fit1
     print("Fitness max : ", max(fit))
     index = np.argmax(fit)
+    print("Average fit:", fit.sum() / fit.shape[0])
     print("Associated desc : " , beh[index] )
     print("Associated ctrl : " , x[index] )
     print("Index : ", index)
@@ -203,6 +206,6 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(1, 1, figsize=(10, 10), facecolor='white', edgecolor='white')
     axes.set_xlim(0, 1)
     axes.set_ylim(0, 1)
-    plot_cvt(axes, centroids, fit, beh, x,2,4)
+    plot_cvt(axes, centroids, fit, beh, x,2,4, -1, 0)
     fig.savefig('cvt.pdf')
     fig.savefig('cvt.png')
