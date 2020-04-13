@@ -141,7 +141,6 @@ def compute(dim_map=-1,
     print(params)
     assert(f != None)
     assert(dim_x != -1)
-    print(centroids, tasks)
     # handle the arguments
     use_distance = False
     if tasks != [] and centroids != []:
