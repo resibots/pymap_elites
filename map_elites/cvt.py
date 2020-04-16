@@ -72,12 +72,12 @@ def __evaluate(t):
     return cm.Species(z, desc, fit)
 
 # map-elites algorithm (CVT variant)
-def compute(dim_map, dim_x, f, 
-    n_niches=1000, n_gen=1000, 
-    params=cm.default_params, 
-    log_file=None, 
-    variation_operator=cm.variation):
-     """CVT MAP-Elites
+def compute(dim_map, dim_x, f,
+            n_niches=1000, n_gen=1000,
+            params=cm.default_params,
+            log_file=None,
+            variation_operator=cm.variation):
+    """CVT MAP-Elites
        Vassiliades V, Chatzilygeroudis K, Mouret JB. Using centroidal voronoi tessellations to scale up the multidimensional archive of phenotypic elites algorithm. IEEE Transactions on Evolutionary Computation. 2017 Aug 3;22(4):623-30.
     """
     # setup the parallel processing pool
@@ -136,9 +136,7 @@ def compute(dim_map, dim_x, f,
         # write log
         if log_file != None:
             fit_list = np.array([x.fitness for x in archive.values()])
-            log_file.write("{} {} {} {}\n".format(evals, len(archive.keys()), fit_list.max(), fit_list.mean()))
+            log_file.write("{} {} {} {} {}\n".format(evals, len(archive.keys()), fit_list.max(), fit_list.mean(), fit_list.std()))
             log_file.flush()
         cm.__save_archive(archive, n_gen)
     return archive
-
-

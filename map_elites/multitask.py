@@ -36,7 +36,7 @@
 #|
 #| The fact that you are presently reading this means that you have
 #| had knowledge of the CeCILL license and that you accept its terms.
-# 
+#
 # from scipy.spatial import cKDTree : TODO
 
 import math
@@ -71,7 +71,7 @@ def add_to_archive(s, archive):
 # evaluate a single vector (z) with a function f and return a species
 # t = vector, function
 def __evaluate(t):
-    z, f, task, centroid, _ = t 
+    z, f, task, centroid, _ = t
     fit = f(z, task)
     return cm.Species(z, task, fit, centroid)
 
@@ -120,12 +120,12 @@ def select_niche(x, z, f, centroids, tasks, t_size, params, use_distance=False):
     return to_evaluate
 
 
-def compute(dim_map=-1, 
-            dim_x=-1, 
-            f=None, 
-            num_evals=1e5, 
+def compute(dim_map=-1,
+            dim_x=-1,
+            f=None,
+            num_evals=1e5,
             centroids=[],
-            tasks=[], 
+            tasks=[],
             variation_operator=cm.variation,
             params=cm.default_params,
             log_file=None):
@@ -191,7 +191,7 @@ def compute(dim_map=-1,
             for i in range(0, len(list(s_list))):
                 add_to_archive(s_list[i], archive)
             init_count = len(archive)
-        else:  
+        else:
             # main variation/selection loop
             keys = list(archive.keys())
             # we do all the randint together because randint is slow
@@ -225,7 +225,7 @@ def compute(dim_map=-1,
             np.savetxt('t_size.dat', np.array(n_e))
         if log_file != None:
             fit_list = np.array([x.fitness for x in archive.values()])
-            log_file.write("{} {} {} {}\n".format(n_evals, len(archive.keys()), fit_list.max(), fit_list.mean()))
+            log_file.write("{} {} {} {} {}\n".format(n_evals, len(archive.keys()), fit_list.max(), fit_list.mean(), fit_list.std()))
             log_file.flush()
     cm.__save_archive(archive, n_evals)
     return archive
