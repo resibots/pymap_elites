@@ -52,11 +52,6 @@ from scipy.spatial import distance
 from map_elites import common as cm
 
 
-# TODO : we do not need the KD-tree here -> use the archive directly
-# TODO : remove the to_evaluate_centroid
-
-
-
 def add_to_archive(s, archive):
     centroid = cm.make_hashable(s.centroid)
     if centroid in archive:
@@ -123,7 +118,7 @@ def select_niche(x, z, f, centroids, tasks, t_size, params, use_distance=False):
 def compute(dim_map=-1,
             dim_x=-1,
             f=None,
-            num_evals=1e5,
+            max_evals=1e5,
             centroids=[],
             tasks=[],
             variation_operator=cm.variation,
@@ -135,6 +130,9 @@ def compute(dim_map=-1,
     - if there is a centroid list: use the centroids to compute distances
     when using the distance, use the bandit to select the tournament size (cf paper):
 
+    Format of the logfile: evals archive_size max mean 5%_percentile, 95%_percentile
+
+    Reference:
     Mouret and Maguire (2020). Quality Diversity for Multitask Optimization
     Proceedings of ACM GECCO.
     """
@@ -174,10 +172,10 @@ def compute(dim_map=-1,
     b_evals = 0 # number evaluation since the last dump
     t_size = 1  # size of the tournament (if using distance) [will be selected by the bandit]
     successes = defaultdict(list) # count the successes
-    while (n_evals < num_evals):
+    while (n_evals < max_evals):
         to_evaluate = []
         to_evaluate_centroid = []
-        if n_evals == 0 or init_count<=params['random_init'] * n_tasks:
+        if len(archive) <= params['random_init'] * n_tasks:
             # initialize the map with random individuals
             for i in range(0, params['random_init_batch']):
                 # create a random individual
@@ -190,17 +188,18 @@ def compute(dim_map=-1,
             b_evals += len(to_evaluate)
             for i in range(0, len(list(s_list))):
                 add_to_archive(s_list[i], archive)
-            init_count = len(archive)
         else:
             # main variation/selection loop
             keys = list(archive.keys())
             # we do all the randint together because randint is slow
-            rand = np.random.randint(len(keys), size=params['batch_size'])
+            rand1 = np.random.randint(len(keys), size=params['batch_size'])
+            rand2 = np.random.randint(len(keys), size=params['batch_size'])
             for n in range(0, params['batch_size']):
                 # parent selection
-                x = archive[keys[rand[n]]]
+                x = archive[keys[rand1[n]]]
+                y = archive[keys[rand2[n]]]
                 # copy & add variation
-                z = cm.variation(x.x, archive, params)
+                z = variation_operator(x.x, y.x, params)
                 # different modes for multi-task (to select the niche)
                 to_evaluate += select_niche(x, z, f, centroids, tasks, t_size, params, use_distance)
             # parallel evaluation of the fitness
@@ -225,7 +224,7 @@ def compute(dim_map=-1,
             np.savetxt('t_size.dat', np.array(n_e))
         if log_file != None:
             fit_list = np.array([x.fitness for x in archive.values()])
-            log_file.write("{} {} {} {} {}\n".format(n_evals, len(archive.keys()), fit_list.max(), fit_list.mean(), fit_list.std()))
+            log_file.write("{} {} {} {} {} {}\n".format(n_evals, len(archive.keys()), fit_list.max(), np.median(fit_list), np.percentile(fit_list, 5), np.percentile(fit_list, 95)))
             log_file.flush()
     cm.__save_archive(archive, n_evals)
     return archive

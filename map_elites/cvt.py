@@ -54,7 +54,6 @@ def __add_to_archive(s, centroid, archive, kdt):
     n = cm.make_hashable(niche)
     s.centroid = n
     if n in archive:
-        c = s.challenges + 1
         if s.fitness > archive[n].fitness:
             archive[n] = s
             return 1
@@ -73,12 +72,16 @@ def __evaluate(t):
 
 # map-elites algorithm (CVT variant)
 def compute(dim_map, dim_x, f,
-            n_niches=1000, n_gen=1000,
+            n_niches=1000,
+            max_evals=1e5,
             params=cm.default_params,
             log_file=None,
             variation_operator=cm.variation):
     """CVT MAP-Elites
        Vassiliades V, Chatzilygeroudis K, Mouret JB. Using centroidal voronoi tessellations to scale up the multidimensional archive of phenotypic elites algorithm. IEEE Transactions on Evolutionary Computation. 2017 Aug 3;22(4):623-30.
+
+       Format of the logfile: evals archive_size max mean 5%_percentile, 95%_percentile
+
     """
     # setup the parallel processing pool
     num_cores = multiprocessing.cpu_count()
@@ -90,53 +93,48 @@ def compute(dim_map, dim_x, f,
     kdt = KDTree(c, leaf_size=30, metric='euclidean')
     cm.__write_centroids(c)
 
-    # init archive (empty)
-    archive = {}
+    archive = {} # init archive (empty)
+    n_evals = 0 # number of evaluations since the beginning
+    b_evals = 0 # number evaluation since the last dump
 
-    init_count = 0
-    evals = 0
     # main loop
-    for g in range(0, n_gen + 1):
+    while (n_evals < max_evals):
         to_evaluate = []
-        if g == 0:  # random initialization
-            while(init_count<=params['random_init'] * n_niches):
-                for i in range(0, params['random_init_batch']):
-                    x = cm.random_individual(dim_x, params)
-                    to_evaluate += [(np.array(x), f)]
-                if params['parallel'] == True:
-                    s_list = pool.map(__evaluate, to_evaluate)
-                else:
-                    s_list = map(__evaluate, to_evaluate)
-                evals += len(to_evaluate)
-                for s in s_list:
-                    __add_to_archive(s, s.desc, archive, kdt)
-                init_count = len(archive)
-                to_evaluate = []
+        # random initialization
+        if len(archive) <= params['random_init'] * n_niches:
+            for i in range(0, params['random_init_batch']):
+                x = cm.random_individual(dim_x, params)
+                to_evaluate += [(np.array(x), f)]
         else:  # variation/selection loop
             keys = list(archive.keys())
+            # we select all the parents at the same time because randint is slow
+            rand1 = np.random.randint(len(keys), size=params['batch_size'])
+            rand2 = np.random.randint(len(keys), size=params['batch_size'])
             for n in range(0, params['batch_size']):
                 # parent selection
-                x = archive[keys[np.random.randint(len(keys))]]
+                x = archive[keys[rand1[n]]]
+                y = archive[keys[rand2[n]]]
                 # copy & add variation
-                z = variation_operator(x.x, archive, params)
+                z = variation_operator(x.x, y.x, params)
                 to_evaluate += [(z, f)]
-            # parallel evaluation of the fitness
-            if params['parallel'] == True:
-                s_list = pool.map(__evaluate, to_evaluate)
-            else:
-                s_list = map(__evaluate, to_evaluate)
-            evals += len(to_evaluate)
-            # natural selection
-            for s in s_list:
-                __add_to_archive(s, s.desc, archive, kdt)
+        # evaluation of the fitness for to_evaluate
+        s_list = cm.parallel_eval(__evaluate, to_evaluate, pool, params)
+        # natural selection
+        for s in s_list:
+            __add_to_archive(s, s.desc, archive, kdt)
+        # count evals
+        n_evals += len(to_evaluate)
+        b_evals += len(to_evaluate)
+
         # write archive
-        if g % params['dump_period'] == 0 and params['dump_period'] != -1:
-            print("generation:", g)
-            cm.__save_archive(archive, g)
+        if b_evals >= params['dump_period'] and params['dump_period'] != -1:
+            print("[{}/{}]".format(n_evals, int(max_evals)), end=" ", flush=True)
+            cm.__save_archive(archive, n_evals)
+            b_evals = 0
         # write log
         if log_file != None:
             fit_list = np.array([x.fitness for x in archive.values()])
-            log_file.write("{} {} {} {} {}\n".format(evals, len(archive.keys()), fit_list.max(), fit_list.mean(), fit_list.std()))
+            log_file.write("{} {} {} {} {} {}\n".format(n_evals, len(archive.keys()), fit_list.max(), np.median(fit_list), np.percentile(fit_list, 5), np.percentile(fit_list, 95)))
             log_file.flush()
-        cm.__save_archive(archive, n_gen)
+    cm.__save_archive(archive, n_evals)
     return archive

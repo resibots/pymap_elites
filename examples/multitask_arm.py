@@ -36,7 +36,7 @@
 #|
 #| The fact that you are presently reading this means that you have
 #| had knowledge of the CeCILL license and that you accept its terms.
-# 
+#
 
 import kinematic_arm
 import math
@@ -54,13 +54,13 @@ def arm(angles, task):
     lengths = np.ones(len(angles)) * task[1] / len(angles)
     target = 0.5 * np.ones(2)
     a = kinematic_arm.Arm(lengths)
-    # command in 
+    # command in
     command = (angles - 0.5) * angular_range * math.pi * 2
     ef, _ = a.fw_kinematics(command)
     f = -np.linalg.norm(ef - target)
     return f
 
-    
+
 if len(sys.argv) == 1 or ('help' in sys.argv):
     print("Usage: \"python3 ./examples/multitask_arm.py 10 [no_distance]\"")
     exit(0)
@@ -71,8 +71,6 @@ dim_x = int(sys.argv[1])
 # dim_map, dim_x, function
 px = cm_map_elites.default_params.copy()
 px["dump_period"] = 2000
-px["min"] = np.zeros(dim_x)
-px["max"] = np.ones(dim_x)
 px["parallel"] = False
 
 n_tasks = 5000
@@ -82,7 +80,7 @@ c = cm_map_elites.cvt(n_tasks, dim_map, 30000, True)
 
 # CVT-based version
 if len(sys.argv) == 2 or sys.argv[2] == 'distance':
-    archive = mt_map_elites.compute(dim_x = dim_x, f=arm, centroids=c, num_evals=1e6, params=px, log_file=open('cover_max_mean.dat', 'w'))
+    archive = mt_map_elites.compute(dim_x = dim_x, f=arm, centroids=c, max_evals=1e6, params=px, log_file=open('cover_max_median.dat', 'w'))
 else:
     # no distance:
-    archive = mt_map_elites.compute(dim_x = dim_x, f=arm, tasks=c, num_evals=1e6, params=px, log_file=open('cover_max_mean.dat', 'w'))
+    archive = mt_map_elites.compute(dim_x = dim_x, f=arm, tasks=c, max_evals=1e6, params=px, log_file=open('cover_max_median.dat', 'w'))

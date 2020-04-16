@@ -36,7 +36,7 @@
 #|
 #| The fact that you are presently reading this means that you have
 #| had knowledge of the CeCILL license and that you accept its terms.
-# 
+#
 
 import math
 import numpy as np
@@ -57,10 +57,6 @@ default_params = \
         "random_init": 0.1,
         # batch for random initialization
         "random_init_batch": 100,
-        # parameters of the "mutation" operator
-        "sigma_iso": 0.01,
-        # parameters of the "cross-over" operator
-        "sigma_line": 0.2,
         # when to write results (one generation = one batch)
         "dump_period": 10000,
         # do we use several cores?
@@ -68,8 +64,8 @@ default_params = \
         # do we cache the result of CVT and reuse?
         "cvt_use_cache": True,
         # min/max of parameters
-        "min": np.zeros(15),
-        "max": np.ones(15),
+        "min": 0,
+        "max": 1,
         # iso variation
         "iso_sigma": 1./300.,
         "line_sigma": 20./300.
@@ -81,34 +77,80 @@ class Species:
         self.fitness = fitness
         self.centroid = centroid
 
-def scale(x,params):
-    assert(params["max"].shape[0] >= x.shape[0])
-    assert(params["min"].shape[0] >= x.shape[0])
-    return x * (params["max"] - params["min"]) + params["min"] 
-    
+def scale(x, params):
+    return np.interp(x, (x.min(), x.max()), (params['min'], params['max']))
+
 def random_individual(dim_x, params):
     x = np.random.random(dim_x)
     x = scale(x, params)
-    return x.clip(params["min"], params["max"])
+    return x.clip(np.ones(dim_x) * params["min"], np.ones(dim_x) * params["max"])
 
-
-def variation_xy(x, z, params):
-    assert(x.shape == z.shape)
-    assert(params["max"].shape[0] >= x.shape[0])
-    assert(params["min"].shape[0] >= x.shape[0])
-    p_max = np.array(params["max"])
-    p_min = np.array(params["min"])
-    a = np.random.normal(0, params["iso_sigma"] * (p_max - p_min), size=len(x))
-    b = np.random.normal(0, params["line_sigma"] * (p_max - p_min), size=len(x))
-    y = x.copy() + a + b * (x - z)
-    y = np.clip(y, p_min, p_max)
+def polynomial_mutation(x):
+    '''
+    Cf Deb 2001, p 124 ; param: eta_m
+    '''
+    y = x.copy()
+    eta_m = 5.0;
+    r = np.random.random(size=len(x))
+    for i in range(0, len(x)):
+        if r[i] < 0.5:
+            delta_i = math.pow(2.0 * r[i], 1.0 / (eta_m + 1.0)) - 1.0
+        else:
+            delta_i = 1 - math.pow(2.0 * (1.0 - r[i]), 1.0 / (eta_m + 1.0))
+        y[i] = delta_i
     return y
 
+def sbx(x, y, params):
+    '''
+    SBX (cf Deb 2001, p 113) Simulated Binary Crossover
 
-def variation(x, archive, params):
-  keys = list(archive.keys())
-  z = archive[keys[np.random.randint(len(keys))]].x
-  return variation_xy(x, z, params)
+    A large value ef eta gives a higher probablitity for
+    creating a `near-parent' solutions and a small value allows
+    distant solutions to be selected as offspring.
+    '''
+    eta = 10.0;
+    xl = params['min']
+    xu = params['max']
+    z = x.copy()
+    r1 = np.random.random(size=len(x))
+    r2 = np.random.random(size=len(x))
+
+    for i in range(0, len(x)):
+        if abs(x[i] - y[i]) > 1e-15:
+            x1 = min(x[i], y[i])
+            x2 = max(x[i], y[i])
+
+            beta = 1.0 + (2.0 * (x1 - xl) / (x2 - x1))
+            alpha = 2.0 - beta ** -(eta + 1)
+            rand = r1[i]
+            if rand <= 1.0 / alpha:
+                beta_q = (rand * alpha) ** (1.0 / (eta + 1))
+            else:
+                beta_q = (1.0 / (2.0 - rand * alpha)) ** (1.0 / (eta + 1))
+
+            c1 = 0.5 * (x1 + x2 - beta_q * (x2 - x1))
+
+            beta = 1.0 + (2.0 * (xu - x2) / (x2 - x1))
+            alpha = 2.0 - beta ** -(eta + 1)
+            if rand <= 1.0 / alpha:
+                beta_q = (rand * alpha) ** (1.0 / (eta + 1))
+            else:
+                beta_q = (1.0 / (2.0 - rand * alpha)) ** (1.0 / (eta + 1))
+            c2 = 0.5 * (x1 + x2 + beta_q * (x2 - x1))
+
+            c1 = min(max(c1, xl), xu)
+            c2 = min(max(c2, xl), xu)
+
+            if r2[i] <= 0.5:
+                z[i] = c2
+            else:
+                z[i] = c1
+    return z
+
+def variation(x, z, params):
+    assert(x.shape == z.shape)
+    y = sbx(x, z, params)
+    return y
 
 def __centroids_filename(k, dim):
     return 'centroids_' + str(k) + '_' + str(dim) + '.dat'
