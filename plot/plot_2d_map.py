@@ -161,6 +161,7 @@ def plot_cvt(ax, centroids, fit, desc, x,dim1,dim2, min_fit, max_fit):
     print("Voronoi...")
     vor = Voronoi(centroids[:,0:2])
     regions, vertices = voronoi_finite_polygons_2d(vor)
+    print("fit:", min_fit, max_fit)
     norm = matplotlib.colors.Normalize(vmin=min_fit, vmax=max_fit)
     print("KD-Tree...")
     kdt = KDTree(centroids, leaf_size = 30, metric = 'euclidean')
@@ -187,8 +188,8 @@ def plot_cvt(ax, centroids, fit, desc, x,dim1,dim2, min_fit, max_fit):
     sc = ax.scatter(desc[:,0], desc[:,1], c=fit_reshaped, cmap=my_cmap, s=10, zorder=0)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 5:
-        sys.exit('Usage: %s centroids_file archive.dat min_fit max_fit' % sys.argv[0])
+    if len(sys.argv) < 3:
+        sys.exit('Usage: %s centroids_file archive.dat [min_fit] [max_fit]' % sys.argv[0])
 
     centroids = load_centroids(sys.argv[1])
     dim_x = 24
@@ -201,13 +202,17 @@ if __name__ == "__main__":
     print("Index : ", index)
     print("total len ",len(fit))
 
-    min_fit = float(sys.argv[3])
-    max_fit = float(sys.argv[4])
+    if len(sys.argv) > 3:
+        min_fit = float(sys.argv[3])
+        max_fit = float(sys.argv[4])
+    else:
+        min_fit = min(fit)
+        max_fit = max(fit)
     print("Min = {} Max={}".format(min_fit, max_fit))
     # Plot
     fig, axes = plt.subplots(1, 1, figsize=(10, 10), facecolor='white', edgecolor='white')
     axes.set_xlim(0, 1)
     axes.set_ylim(0, 1)
-    plot_cvt(axes, centroids, fit, beh, x,2,4, -100, 0)
+    plot_cvt(axes, centroids, fit, beh, x,2,4, min_fit, max_fit)
     fig.savefig('cvt.pdf')
     fig.savefig('cvt.png')
