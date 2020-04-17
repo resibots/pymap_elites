@@ -66,9 +66,6 @@ default_params = \
         # min/max of parameters
         "min": 0,
         "max": 1,
-        # iso variation
-        "iso_sigma": 1./300.,
-        "line_sigma": 20./300.
     }
 class Species:
     def __init__(self, x, desc, fitness, centroid=None):
@@ -77,13 +74,6 @@ class Species:
         self.fitness = fitness
         self.centroid = centroid
 
-def scale(x, params):
-    return np.interp(x, (x.min(), x.max()), (params['min'], params['max']))
-
-def random_individual(dim_x, params):
-    x = np.random.random(dim_x)
-    x = scale(x, params)
-    return x.clip(np.ones(dim_x) * params["min"], np.ones(dim_x) * params["max"])
 
 def polynomial_mutation(x):
     '''

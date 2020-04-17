@@ -80,7 +80,7 @@ def compute(dim_map, dim_x, f,
     """CVT MAP-Elites
        Vassiliades V, Chatzilygeroudis K, Mouret JB. Using centroidal voronoi tessellations to scale up the multidimensional archive of phenotypic elites algorithm. IEEE Transactions on Evolutionary Computation. 2017 Aug 3;22(4):623-30.
 
-       Format of the logfile: evals archive_size max mean 5%_percentile, 95%_percentile
+       Format of the logfile: evals archive_size max mean median 5%_percentile, 95%_percentile
 
     """
     # setup the parallel processing pool
@@ -103,8 +103,8 @@ def compute(dim_map, dim_x, f,
         # random initialization
         if len(archive) <= params['random_init'] * n_niches:
             for i in range(0, params['random_init_batch']):
-                x = cm.random_individual(dim_x, params)
-                to_evaluate += [(np.array(x), f)]
+                x = np.random.uniform(low=params['min'], high=params['max'], size=dim_x)
+                to_evaluate += [(x, f)]
         else:  # variation/selection loop
             keys = list(archive.keys())
             # we select all the parents at the same time because randint is slow
@@ -134,7 +134,9 @@ def compute(dim_map, dim_x, f,
         # write log
         if log_file != None:
             fit_list = np.array([x.fitness for x in archive.values()])
-            log_file.write("{} {} {} {} {} {}\n".format(n_evals, len(archive.keys()), fit_list.max(), np.median(fit_list), np.percentile(fit_list, 5), np.percentile(fit_list, 95)))
+            log_file.write("{} {} {} {} {} {}\n".format(n_evals, len(archive.keys()),
+                    fit_list.max(), np.mean(fit_list), np.median(fit_list),
+                    np.percentile(fit_list, 5), np.percentile(fit_list, 95)))
             log_file.flush()
     cm.__save_archive(archive, n_evals)
     return archive

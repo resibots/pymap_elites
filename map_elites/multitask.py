@@ -179,10 +179,10 @@ def compute(dim_map=-1,
             # initialize the map with random individuals
             for i in range(0, params['random_init_batch']):
                 # create a random individual
-                x = cm.random_individual(dim_x, params)
+                x = np.random.uniform(low=params['min'], high=params['max'], size=dim_x)
                 # we take a random task
                 n = np.random.randint(0, n_tasks)
-                to_evaluate += [(np.array(x), f, tasks[n], centroids[n], params)]
+                to_evaluate += [(x, f, tasks[n], centroids[n], params)]
             s_list = cm.parallel_eval(__evaluate, to_evaluate, pool, params)
             n_evals += len(to_evaluate)
             b_evals += len(to_evaluate)
@@ -224,7 +224,7 @@ def compute(dim_map=-1,
             np.savetxt('t_size.dat', np.array(n_e))
         if log_file != None:
             fit_list = np.array([x.fitness for x in archive.values()])
-            log_file.write("{} {} {} {} {} {}\n".format(n_evals, len(archive.keys()), fit_list.max(), np.median(fit_list), np.percentile(fit_list, 5), np.percentile(fit_list, 95)))
+            log_file.write("{} {} {} {} {} {}\n".format(n_evals, len(archive.keys()), fit_list.max(), np.mean(fit_list), np.median(fit_list), np.percentile(fit_list, 5), np.percentile(fit_list, 95)))
             log_file.flush()
     cm.__save_archive(archive, n_evals)
     return archive

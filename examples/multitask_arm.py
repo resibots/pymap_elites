@@ -80,7 +80,7 @@ c = cm_map_elites.cvt(n_tasks, dim_map, 30000, True)
 
 # CVT-based version
 if len(sys.argv) == 2 or sys.argv[2] == 'distance':
-    archive = mt_map_elites.compute(dim_x = dim_x, f=arm, centroids=c, max_evals=1e6, params=px, log_file=open('cover_max_median.dat', 'w'))
+    archive = mt_map_elites.compute(dim_x = dim_x, f=arm, centroids=c, max_evals=1e6, params=px, log_file=open('mt_no_dist.dat', 'w'))
 else:
     # no distance:
-    archive = mt_map_elites.compute(dim_x = dim_x, f=arm, tasks=c, max_evals=1e6, params=px, log_file=open('cover_max_median.dat', 'w'))
+    archive = mt_map_elites.compute(dim_x = dim_x, f=arm, tasks=c, max_evals=1e6, params=px, log_file=open('mt_dist.dat', 'w'))
