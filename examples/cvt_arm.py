@@ -22,4 +22,4 @@ def arm(angles):
 
 px = cm_map_elites.default_params.copy()
 
-archive = cvt_map_elites.compute(2, 5, arm, n_niches=5000, max_evals=1e5, log_file=open('cvt_arm.dat', 'w'), params=px)
+archive = cvt_map_elites.compute(2, 5, arm, n_niches=10000, max_evals=1e6, log_file=open('cvt_arm.dat', 'w'), params=px)
