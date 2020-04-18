@@ -37,22 +37,31 @@ If you use this code in a scientific paper, please cite:
 ```python
 import map_elites.cvt as cvt_map_elites
 
-archive = cvt_map_elites.compute(2, 6, rastrigin, n_niches=5000, n_gen=2500)
+archive = cvt_map_elites.compute(2, 10, rastrigin, n_niches=10000, max_evals=2e6, log_file=open('cvt.dat', 'w'))
 ```
-Where `2` is the dimensionality of the map, ``6`` is the dimensionality of the genotype, ``n_niches`` is the number of niches, and ``n_gen`` is the number of generation (each generation is 100 evaluations in the default parameters) . You can also pass an optional `params` argument to tune a few parameters. Here are the default values:
+Where `2` is the dimensionality of the map, ``10`` is the dimensionality of the genotype, ``n_niches`` is the number of niches, and ``max_evals`` is the number of evaluations. You can also pass an optional `params` argument to tune a few parameters. Here are the default values:
 
 ```
-
 default_params = \
     {
+        # more of this -> higher-quality CVT
         "cvt_samples": 25000,
+        # we evaluate in batches to paralleliez
         "batch_size": 100,
-        "random_init": 1000,
+        # proportion of niches to be filled before starting
+        "random_init": 0.1,
+        # batch for random initialization
         "random_init_batch": 100,
-        "sigma_iso": 0.01,
-        "sigma_line": 0.2,
-        "dump_period": 100,
+        # when to write results (one generation = one batch)
+        "dump_period": 10000,
+        # do we use several cores?
         "parallel": True,
-        "cvt_use_cache": True
+        # do we cache the result of CVT and reuse?
+        "cvt_use_cache": True,
+        # min/max of parameters
+        "min": 0,
+        "max": 1,
     }
 ```
+
+See the `examples` directory for a few examples.
