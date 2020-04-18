@@ -66,7 +66,11 @@ default_params = \
         # min/max of parameters
         "min": 0,
         "max": 1,
+        # only useful if you use the 'iso_dd' variation operator
+        "iso_sigma": 0.01,
+        "line_sigma": 0.2
     }
+
 class Species:
     def __init__(self, x, desc, fitness, centroid=None):
         self.x = x
@@ -98,7 +102,7 @@ def sbx(x, y, params):
     creating a `near-parent' solutions and a small value allows
     distant solutions to be selected as offspring.
     '''
-    eta = 10.0;
+    eta = 10.0
     xl = params['min']
     xu = params['max']
     z = x.copy()
@@ -136,6 +140,24 @@ def sbx(x, y, params):
             else:
                 z[i] = c1
     return z
+
+
+def iso_dd(x, y, params):
+    '''
+    Iso+Line
+    Ref:
+    Vassiliades V, Mouret JB. Discovering the elite hypervolume by leveraging interspecies correlation.
+    GECCO 2018
+    '''
+    assert(x.shape == y.shape)
+    p_max = np.array(params["max"])
+    p_min = np.array(params["min"])
+    a = np.random.normal(0, params['iso_sigma'], size=len(x))
+    b = np.random.normal(0, params['line_sigma'])
+    norm = np.linalg.norm(x - y)
+    z = x.copy() + a + b * (x - y)
+    return np.clip(z, p_min, p_max)
+
 
 def variation(x, z, params):
     assert(x.shape == z.shape)

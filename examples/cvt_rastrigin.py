@@ -23,4 +23,4 @@ px["min"] = 0
 px["max"] = 1
 px["parallel"] = True
 
-archive = cvt_map_elites.compute(2, 10, rastrigin, n_niches=10000, max_evals=2e6, log_file=open('cvt.dat', 'w'), params=px)
+archive = cvt_map_elites.compute(2, 10, rastrigin, n_niches=10000, max_evals=1e6, log_file=open('cvt.dat', 'w'), params=px)
