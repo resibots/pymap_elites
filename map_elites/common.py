@@ -77,7 +77,12 @@ class Species:
         self.desc = desc
         self.fitness = fitness
         self.centroid = centroid
-
+    def __repr__(self):
+        res = ""
+        res += "desc" + str(self.desc)
+        res += "x" + str(self.x)
+        res += "fitness" + str( self.fitness)
+        res += "centroid" + str(self.centroid)
 
 def polynomial_mutation(x):
     '''
@@ -204,7 +209,15 @@ def make_hashable(array):
 
 def parallel_eval(evaluate_function, to_evaluate, pool, params):
     if params['parallel'] == True:
-        s_list = pool.map(evaluate_function, to_evaluate)
+        s_list = []
+        z_list = []
+        t_list = []
+        for (z,f,t,c,params) in to_evaluate:
+            t_list.append(t)
+            z_list.append(z)
+
+        fit = f(z_list, t_list).numpy()
+        s_list = [Species(z, c, fit[i], c) for i,(z,f,t,c,params) in enumerate(to_evaluate)]
     else:
         s_list = map(evaluate_function, to_evaluate)
     return list(s_list)
