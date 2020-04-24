@@ -56,7 +56,7 @@ cdict = {'red': [(0.0,  0.0, 0.0),
                    (0.33, 0.0, 0.0),
                    (0.66,  0.0, 0.0),
                    (1.0,  1.0, 1.0)]}
-my_cmap = matplotlib.colors.LinearSegmentedColormap('my_colormap', cdict, 256)
+my_cmap = cm.viridis# matplotlib.colors.LinearSegmentedColormap('my_colormap', cdict, 256)
 
 def voronoi_finite_polygons_2d(vor, radius=None):
     """
