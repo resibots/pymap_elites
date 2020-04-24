@@ -123,7 +123,8 @@ def compute(dim_map=-1,
             tasks=[],
             variation_operator=cm.variation,
             params=cm.default_params,
-            log_file=None):
+            log_file=None,
+            seeds = None):
     """Multi-task MAP-Elites
     - if there is no centroid : random assignation of niches
     - if there is no task: use the centroids as tasks
@@ -160,6 +161,9 @@ def compute(dim_map=-1,
 
     # init archive (empty)
     archive = {}
+    if seeds is not None:
+        for i in range(0, len(seeds)):
+            add_to_archive(seeds[i], archive)
 
     init_count = 0
 
@@ -183,7 +187,8 @@ def compute(dim_map=-1,
                 # we take a random task
                 n = np.random.randint(0, n_tasks)
                 to_evaluate += [(x, f, tasks[n], centroids[n], params)]
-            s_list = cm.parallel_eval(__evaluate, to_evaluate, pool, params)
+            # s_list = cm.parallel_eval(__evaluate, to_evaluate, pool, params)
+            s_list = cm.parallel_eval(f, to_evaluate, pool, params)
             n_evals += len(to_evaluate)
             b_evals += len(to_evaluate)
             for i in range(0, len(list(s_list))):
@@ -203,7 +208,8 @@ def compute(dim_map=-1,
                 # different modes for multi-task (to select the niche)
                 to_evaluate += select_niche(x, z, f, centroids, tasks, t_size, params, use_distance)
             # parallel evaluation of the fitness
-            s_list = cm.parallel_eval(__evaluate, to_evaluate, pool, params)
+            # s_list = cm.parallel_eval(__evaluate, to_evaluate, pool, params)
+            s_list = cm.parallel_eval(f, to_evaluate, pool, params)
             n_evals += len(to_evaluate)
             b_evals += len(to_evaluate)
             # natural selection
@@ -224,7 +230,7 @@ def compute(dim_map=-1,
             np.savetxt('t_size.dat', np.array(n_e))
         if log_file != None:
             fit_list = np.array([x.fitness for x in archive.values()])
-            log_file.write("{} {} {} {} {} {}\n".format(n_evals, len(archive.keys()), fit_list.max(), np.mean(fit_list), np.median(fit_list), np.percentile(fit_list, 5), np.percentile(fit_list, 95)))
+            log_file.write("{} {} {} {} {} {} {}\n".format(n_evals, len(archive.keys()), fit_list.max(), np.mean(fit_list), np.median(fit_list), np.percentile(fit_list, 5), np.percentile(fit_list, 95)))
             log_file.flush()
     cm.__save_archive(archive, n_evals)
     return archive
