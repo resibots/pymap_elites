@@ -43,20 +43,9 @@ from scipy.spatial import Voronoi, voronoi_plot_2d
 import sys
 from matplotlib.ticker import FuncFormatter
 from sklearn.neighbors import KDTree
+import matplotlib.cm as cm
 
-cdict = {'red': [(0.0,  0.0, 0.0),
-                 (0.33, 0.0, 0.0),
-                 (0.66,  1.0, 1.0),
-                 (1.0,  1.0, 1.0)],
-         'blue': [(0.0,  0.0, 0.0),
-                  (0.33, 1.0, 1.0),
-                  (0.66,  0.0, 0.0),
-                  (1.0,  0.0, 0.0)],
-         'green': [(0.0,  0.0, 0.0),
-                   (0.33, 0.0, 0.0),
-                   (0.66,  0.0, 0.0),
-                   (1.0,  1.0, 1.0)]}
-my_cmap = cm.viridis# matplotlib.colors.LinearSegmentedColormap('my_colormap', cdict, 256)
+my_cmap = cm.viridis
 
 def voronoi_finite_polygons_2d(vor, radius=None):
     """

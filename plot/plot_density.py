@@ -11,20 +11,6 @@ from scipy import stats
 from collections import defaultdict
 from matplotlib import pyplot as plt
 
- # brewer2mpl.get_map args: set name  set type  number of colors
-bmap = brewer2mpl.get_map('Set2', 'qualitative', 7)
-colors = bmap.mpl_colors
- 
-params = {
-    'axes.labelsize': 8,
-    'legend.fontsize': 10,
-    'xtick.labelsize': 10,
-    'ytick.labelsize': 10,
-    'text.usetex': False,
-    'figure.figsize': [6, 8]
-}
-rcParams.update(params)
-
 def customize_axis(ax):
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -41,7 +27,7 @@ def customize_axis(ax):
     ax.grid(axis='y', color="0.9", linestyle='--', linewidth=1)
 
 
-fig = figure(frameon=False)
+fig = figure(frameon=False,figsize=(10, 7))
 ax1 = fig.add_subplot(111)
 
 ax1.set_title('Density')
@@ -52,6 +38,8 @@ norm = matplotlib.colors.Normalize(vmin=0, vmax=len(sys.argv))
 for i in range(1, len(sys.argv)):
     data = np.loadtxt(sys.argv[i])[:,0]
     density = stats.kde.gaussian_kde(data)
+    #density.covariance_factor = lambda : .1
+    #density._compute_covariance()
     print('density computed')
     x = np.linspace(start=min(data), stop=max(data), num=500)
     y = density(x)
