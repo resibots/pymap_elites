@@ -1,7 +1,5 @@
 import numpy
 import math
-import seaborn as sns
-import matplotlib.pyplot as plt
 from map_elites.common import Species
 import torch
 def to_np_array(l):
