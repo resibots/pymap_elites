@@ -1,7 +1,7 @@
 import cma
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-sys.path.append('../DroneLearning')
+sys.path.append('../pytorchdronelearning')
 sys.path.append('../')
 import map_elites.common as cm_map_elites
 import map_elites.multitask as mt_map_elites
