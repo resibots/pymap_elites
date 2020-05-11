@@ -57,7 +57,7 @@ class HexaTasks:
         inertia = torch.cat(tuple([t[2].unsqueeze(dim =0) for t in tasks]))
         inv_inertia = torch.cat(tuple([t[3].unsqueeze(dim =0) for t in tasks]))
         motor_total_change_time = torch.cat(tuple([t[4].unsqueeze(dim = 0) for t in tasks]))
-        coeffs = torch.cat(tuple([torch.tensor(c).unsqueeze(dim = 0) for c in coeffs]))
+        coeffs = torch.cat(tuple([c.clone().detach().unsqueeze(dim = 0) for c in coeffs]))
         n = mixing_matrices.shape[0]
         # print(m.shape)
         assert(m.shape[0] == n)
