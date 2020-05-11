@@ -100,14 +100,14 @@ def CMAES_search(hexa_simu, model_params, task, iterations):
             print("fitness:",  fitness)
             mean_fitness = sum(fitness)/len(X)
             print("mean fitness:", mean_fitness)
-            mean_fitness_list.append(mean_fitness) 
+            mean_fitness_list.append(mean_fitness)
             print("Dist mean:")
             practical_mean = X.mean(axis = 0)
             print("PX:", practical_mean[0],"IX:", practical_mean[3],"DX:", practical_mean[6], "PY:", practical_mean[1],"IY:", practical_mean[4],"DY:", practical_mean[7],"PZ:", practical_mean[2],"IZ:", practical_mean[5],"DZ:", practical_mean[8])
             # print("PX:", es.mean[0],"IX:", es.mean[3],"DX:", es.mean[6], "PY:", es.mean[1],"IY:", es.mean[4],"DY:", es.mean[7],"PZ:", es.mean[2],"IZ:", es.mean[5],"DZ:", es.mean[8])
             print("PAX:", practical_mean[9],"IAX:", practical_mean[12],"DAX:", practical_mean[15],"PAY:", practical_mean[10],"IAY:", practical_mean[13],"DAY:", practical_mean[16],"PAZ:", practical_mean[11],"IAZ:", practical_mean[14],"DAZ:", practical_mean[17])
             # print("PAX:", es.mean[9],"IAX:", es.mean[12],"DAX:", es.mean[15],"PAY:", es.mean[10],"IAY:", es.mean[13],"DAY:", es.mean[16],"PAZ:", es.mean[11],"IAZ:", es.mean[14],"DAZ:", es.mean[17])
-            std = es.sigma * es.sigma_vec.scaling * np.sqrt(es.dC) * es.gp.scales
+            # std = es.sigma * es.sigma_vec.scaling * np.sqrt(es.dC) * es.gp.scales
             practical_std = X.std(axis = 0)
             mean_std_list.append(practical_std.mean())
             print("Dist std:")
@@ -120,6 +120,22 @@ def CMAES_search(hexa_simu, model_params, task, iterations):
             print('\n')
         print_gen(numpy.array(X),fitness)
     return mean_fitness_list, mean_std_list
+
+def fitness_sensitivity(n_samples, parameter_name_list, optimized_coefficients = False, perfect_model = False, noise_level = 1.0):
+    hexa_simu = HexaTasks(large_drone = False, perfect_model = perfect_model)
+    models_params = [HexaVectorized.noisy_parameters(noise_fields = parameter_name_list, noise_level = noise_level) for i in range(n_samples)]
+    mixing_matrices, m, inertia, inv_inertia, motor_total_change_time = HexaVectorized.gen_matrices_and_other(models_params, hexa_simu.model)
+    tasks = [(mixing_matrices[i], m[i], inertia[i], inv_inertia[i], motor_total_change_time[i]) for i in range(len(models_params))]
+    if optimized_coefficients:
+        fitness_list = []
+        for i in range(n_samples):
+            mean_f, mean_v = CMAES_search(hexa_simu, models_params[i], tasks[i], iterations = 100)
+            fitness_list.append(mean_f[-1])
+    else:
+        fitness_tensor = hexa_simu.run(torch.ones((n_samples, 18)) * 0.05 , tasks)
+        fitness_list = [fitness_tensor[i] for i in range(n_samples)]
+    return fitness_list
+
 if __name__ == "__main__":
     large_drone = False
     perfect_model = True
