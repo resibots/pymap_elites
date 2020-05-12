@@ -22,7 +22,6 @@ if __name__ == "__main__":
         result_filename = sys.argv[2]
         optimize_coefficients = bool(sys.argv[3])
     elif len(sys.argv) == 5:
-        print("Usage: \"python3 ./examples/multitask_arm.py field result_filename optimize_coefficients perfect_models\"")
         field_to_test = sys.argv[1]
         result_filename = sys.argv[2]
         optimize_coefficients = (sys.argv[3] == "True")
