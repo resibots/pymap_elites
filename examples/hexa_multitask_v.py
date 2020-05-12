@@ -75,6 +75,7 @@ class HexaTasks:
         f -= self.model.cost_from_trajectory(state_history2, self.setpoints2).mean(dim = 0)
         return f
 def CMAES_search(hexa_simu, model_params, task, iterations):
+    dim_x = 18
     es = cma.CMAEvolutionStrategy(dim_x * [0.05], 0.1, {'bounds': [0., 1.]})
     for k,v in model_params.items():
         print(k,v)
