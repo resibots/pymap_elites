@@ -85,7 +85,7 @@ def CMAES_search(hexa_simu, model_params, task, iterations):
         print("Gen:", i, "--------------------------------------------------------------------------")
         X = es.ask()
         task_list = [task for _ in range(len(X))]
-        fitness = hexa_simu.run(X, task_list)
+        fitness = hexa_simu.run([torch.tensor(x) for x in X], task_list)
         fitness = [-max(fitness[i].item(), -1e50) for i in range(len(X))]
         min_fitness = min(min(fitness), min_fitness)
         es.tell(X, fitness)
