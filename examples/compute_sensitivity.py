@@ -41,7 +41,7 @@ if __name__ == "__main__":
     result_file.write("field_tested: " + field_to_test + "; optimize_coefficients: " + str(optimize_coefficients) + '; perfect_models: ' + str(perfect_models) + '; n_samples: ' + str(n_samples) + '\n')
     for point in res:
         result_file.write(str(point['noise_level']) + ";" + str(point['fitness_mean']) + ";" + str(point['fitness_var']) + "\n")
-        result_file.write(str([v.item for v in point['fitness_list']]) + '\n')
+        result_file.write(str([v.item() for v in point['fitness_list']]) + '\n')
     result_file.close()
 
 
