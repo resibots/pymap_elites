@@ -31,7 +31,7 @@ if __name__ == "__main__":
     print("Perfect Models:", perfect_models)
     print("Result_filename:", result_filename)
     res = []
-    n_samples = 20
+    n_samples = 10
     for noise_level in [200, 80, 50, 20, 15, 10, 8, 6, 4, 2, 1, 0.5, 0.25, 0.1, 0.05, 0.01, 0.005, 0.001]:
         fitness_list = hexa_sim.fitness_sensitivity(n_samples, [field_to_test], optimize_coefficients, perfect_models, noise_level)
         fitness_mean = numpy.mean(fitness_list)

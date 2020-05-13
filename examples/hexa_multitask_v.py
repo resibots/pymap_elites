@@ -76,7 +76,7 @@ class HexaTasks:
         return f
 def CMAES_search(hexa_simu, model_params, task, iterations):
     dim_x = 18
-    es = cma.CMAEvolutionStrategy(dim_x * [0.05], 0.1, {'bounds': [0., 1.]})
+    es = cma.CMAEvolutionStrategy(dim_x * [0.05], 0.2, {'bounds': [0., 1.]})
     for k,v in model_params.items():
         print(k,v)
 
@@ -130,7 +130,7 @@ def fitness_sensitivity(n_samples, parameter_name_list, optimized_coefficients =
     if optimized_coefficients:
         fitness_list = []
         for i in range(n_samples):
-            mean_f, mean_v = CMAES_search(hexa_simu, models_params[i], tasks[i], iterations = 100)
+            mean_f, mean_v = CMAES_search(hexa_simu, models_params[i], tasks[i], iterations = 40)
             fitness_list.append(mean_f[-1])
     else:
         fitness_tensor = hexa_simu.run(torch.ones((n_samples, 18)) * 0.05 , tasks)
