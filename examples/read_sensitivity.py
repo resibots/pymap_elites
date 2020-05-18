@@ -9,5 +9,5 @@ def read_data(filename):
         line2 = lines[i+1][1:-2].split(',')
         fitness_values = [float(s) for s in line2]
         filtered_fitness_values = [v for v in fitness_values if v> -float('inf')]
-        data.append({'noise_level' : float(line1[0]), 'fitness_mean': float(line1[1]), 'fitness_var': float(line1[2][:-1]), 'min': min(filtered_fitness_values), "max": max(filtered_fitness_values)})
+        data.append({'noise_level' : float(line1[0]), 'fitness_mean': float(line1[1]), 'fitness_var': float(line1[2][:-1]), 'min': min(filtered_fitness_values), "max": max(filtered_fitness_values), 'values': fitness_values})
     return data
