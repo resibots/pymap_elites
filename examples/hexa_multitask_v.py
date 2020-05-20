@@ -131,7 +131,7 @@ def fitness_sensitivity(n_samples, parameter_name_list, optimized_coefficients =
         fitness_list = []
         for i in range(n_samples):
             mean_f, mean_v, min_f = CMAES_search(hexa_simu, models_params[i], tasks[i], iterations = 40)
-            fitness_list.append(min_f[-1])
+            fitness_list.append(min_f)
     else:
         fitness_tensor = hexa_simu.run(torch.ones((n_samples, 18)) * 0.05 , tasks)
         fitness_list = [fitness_tensor[i].item() for i in range(n_samples)]
