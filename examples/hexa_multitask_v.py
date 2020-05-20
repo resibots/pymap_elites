@@ -120,7 +120,7 @@ def CMAES_search(hexa_simu, model_params, task, iterations):
             print("min_fitness", min_fitness)
             print('\n')
         print_gen(numpy.array(X),fitness)
-    return mean_fitness_list, mean_std_list
+    return mean_fitness_list, mean_std_list, min_fitness
 
 def fitness_sensitivity(n_samples, parameter_name_list, optimized_coefficients = False, perfect_model = False, noise_level = 1.0):
     hexa_simu = HexaTasks(large_drone = False, perfect_model = perfect_model)
@@ -130,8 +130,8 @@ def fitness_sensitivity(n_samples, parameter_name_list, optimized_coefficients =
     if optimized_coefficients:
         fitness_list = []
         for i in range(n_samples):
-            mean_f, mean_v = CMAES_search(hexa_simu, models_params[i], tasks[i], iterations = 40)
-            fitness_list.append(mean_f[-1])
+            mean_f, mean_v, min_f = CMAES_search(hexa_simu, models_params[i], tasks[i], iterations = 40)
+            fitness_list.append(min_f[-1])
     else:
         fitness_tensor = hexa_simu.run(torch.ones((n_samples, 18)) * 0.05 , tasks)
         fitness_list = [fitness_tensor[i].item() for i in range(n_samples)]
