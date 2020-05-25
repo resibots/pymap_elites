@@ -4,7 +4,7 @@ def read_data(filename):
     file.close()
     title_line  = lines[0]
     data = [] 
-    for i in range(1, len(lines), 2):
+    for i in range(1, len(lines), 3):
         line1 = lines[i].split(';')
         line2 = lines[i+1][1:-2].split(',')
         fitness_values = [float(s) for s in line2]

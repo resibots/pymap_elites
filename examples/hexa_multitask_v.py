@@ -80,14 +80,18 @@ def CMAES_search(hexa_simu, model_params, task, iterations):
     for k,v in model_params.items():
         print(k,v)
 
-    min_fitness = float('inf') 
+    min_fitness = float('inf')
+    best_controller = dim_x * [0.05]
     for i in range(iterations):
         print("Gen:", i, "--------------------------------------------------------------------------")
         X = es.ask()
         task_list = [task for _ in range(len(X))]
         fitness = hexa_simu.run([torch.tensor(x) for x in X], task_list)
         fitness = [-max(fitness[i].item(), -1e50) for i in range(len(X))]
-        min_fitness = min(min(fitness), min_fitness)
+        arg_min_fitness_tmp = numpy.argmin(fitness)
+        if fitness[arg_min_fitness_tmp] < min_fitness:
+            min_fitness = fitness[arg_min_fitness_tmp]
+            best_controller = X[arg_min_fitness_tmp]
         es.tell(X, fitness)
         mean_fitness_list = []
         mean_std_list = []
@@ -120,7 +124,7 @@ def CMAES_search(hexa_simu, model_params, task, iterations):
             print("min_fitness", min_fitness)
             print('\n')
         print_gen(numpy.array(X),fitness)
-    return mean_fitness_list, mean_std_list, min_fitness
+    return mean_fitness_list, mean_std_list, min_fitness, best_controller
 
 def fitness_sensitivity(n_samples, parameter_name_list, optimized_coefficients = False, perfect_model = False, noise_level = 1.0):
     hexa_simu = HexaTasks(large_drone = False, perfect_model = perfect_model)
@@ -129,13 +133,16 @@ def fitness_sensitivity(n_samples, parameter_name_list, optimized_coefficients =
     tasks = [(mixing_matrices[i], m[i], inertia[i], inv_inertia[i], motor_total_change_time[i]) for i in range(len(models_params))]
     if optimized_coefficients:
         fitness_list = []
+        best_controllers = []
         for i in range(n_samples):
-            mean_f, mean_v, min_f = CMAES_search(hexa_simu, models_params[i], tasks[i], iterations = 200)
+            mean_f, mean_v, min_f, best_controller = CMAES_search(hexa_simu, models_params[i], tasks[i], iterations = 2)
             fitness_list.append(min_f)
+            best_controllers.append(best_controller)
     else:
         fitness_tensor = hexa_simu.run(torch.ones((n_samples, 18)) * 0.05 , tasks)
         fitness_list = [fitness_tensor[i].item() for i in range(n_samples)]
-    return fitness_list
+        best_controller_list = [[18 * [0.05]] for i in range(n_samples)]
+    return fitness_list, best_controller_list
 
 if __name__ == "__main__":
     large_drone = False

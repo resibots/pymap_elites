@@ -36,15 +36,16 @@ if __name__ == "__main__":
     # noise_levels = [200, 80, 50, 20, 15, 10, 8, 6, 4, 2, 1, 0.5, 0.25, 0.1, 0.05, 0.01, 0.005, 0.001]
     noise_levels = [0, 1] 
     for noise_level in noise_levels:
-        fitness_list = hexa_sim.fitness_sensitivity(n_samples, [field_to_test], optimize_coefficients, perfect_models, noise_level)
+        fitness_list, controller_list = hexa_sim.fitness_sensitivity(n_samples, [field_to_test], optimize_coefficients, perfect_models, noise_level)
         fitness_mean = numpy.mean(fitness_list)
         fitness_var = numpy.var(fitness_list)
-        res.append({'noise_level': noise_level, 'fitness_mean': fitness_mean, 'fitness_var': fitness_var, 'fitness_list': fitness_list})
+        res.append({'noise_level': noise_level, 'fitness_mean': fitness_mean, 'fitness_var': fitness_var, 'fitness_list': fitness_list, 'controller_list' : controller_list})
     result_file = open(result_filename, 'w')
     result_file.write("field_tested: " + field_to_test + "; optimize_coefficients: " + str(optimize_coefficients) + '; perfect_models: ' + str(perfect_models) + '; n_samples: ' + str(n_samples) + '\n')
     for point in res:
         result_file.write(str(point['noise_level']) + ";" + str(point['fitness_mean']) + ";" + str(point['fitness_var']) + "\n")
         result_file.write(str([v for v in point['fitness_list']]) + '\n')
+        result_file.write(str([v for v in point['controller_list']]) + '\n')
     result_file.close()
 
 
