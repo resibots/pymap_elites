@@ -45,7 +45,7 @@ if __name__ == "__main__":
     for point in res:
         result_file.write(str(point['noise_level']) + ";" + str(point['fitness_mean']) + ";" + str(point['fitness_var']) + "\n")
         result_file.write(str([v for v in point['fitness_list']]) + '\n')
-        result_file.write(str([v for v in point['controller_list']]) + '\n')
+        result_file.write(str([list(c) for c in point['controller_list']]) + '\n')
     result_file.close()
 
 
