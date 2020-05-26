@@ -133,11 +133,11 @@ def fitness_sensitivity(n_samples, parameter_name_list, optimized_coefficients =
     tasks = [(mixing_matrices[i], m[i], inertia[i], inv_inertia[i], motor_total_change_time[i]) for i in range(len(models_params))]
     if optimized_coefficients:
         fitness_list = []
-        best_controllers = []
+        best_controller_list = []
         for i in range(n_samples):
             mean_f, mean_v, min_f, best_controller = CMAES_search(hexa_simu, models_params[i], tasks[i], iterations = 2)
             fitness_list.append(min_f)
-            best_controllers.append(best_controller)
+            best_controller_list.append(best_controller)
     else:
         fitness_tensor = hexa_simu.run(torch.ones((n_samples, 18)) * 0.05 , tasks)
         fitness_list = [fitness_tensor[i].item() for i in range(n_samples)]
