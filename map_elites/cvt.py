@@ -134,7 +134,7 @@ def compute(dim_map, dim_x, f,
         # write log
         if log_file != None:
             fit_list = np.array([x.fitness for x in archive.values()])
-            log_file.write("{} {} {} {} {} {}\n".format(n_evals, len(archive.keys()),
+            log_file.write("{} {} {} {} {} {} {}\n".format(n_evals, len(archive.keys()),
                     fit_list.max(), np.mean(fit_list), np.median(fit_list),
                     np.percentile(fit_list, 5), np.percentile(fit_list, 95)))
             log_file.flush()
