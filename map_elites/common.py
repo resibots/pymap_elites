@@ -91,7 +91,7 @@ def polynomial_mutation(x):
             delta_i = math.pow(2.0 * r[i], 1.0 / (eta_m + 1.0)) - 1.0
         else:
             delta_i = 1 - math.pow(2.0 * (1.0 - r[i]), 1.0 / (eta_m + 1.0))
-        y[i] = delta_i
+        y[i] += delta_i
     return y
 
 def sbx(x, y, params):
