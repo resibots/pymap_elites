@@ -40,6 +40,7 @@
 import math
 import numpy as np
 import multiprocessing
+import ctypes
 
 # from scipy.spatial import cKDTree : TODO -- faster?
 from sklearn.neighbors import KDTree
@@ -63,12 +64,21 @@ def __add_to_archive(s, centroid, archive, kdt):
         return 1
 
 
+def initpool(a1, a2):
+    global sa_genotypes
+    global sa_results
+    sa_genotypes = a1
+    sa_results = a2
+
 # evaluate a single vector (x) with a function f and return a species
 # t = vector, function
 def __evaluate(t):
+    global sa_genotypes
     z, f = t  # evaluate z with function f
-    fit, desc = f(z)
-    return cm.Species(z, desc, fit)
+    fit, desc = f(sa_genotypes[z,:])
+    sa_results[z,0] = fit
+    sa_results[z,1:1 + len(desc)] = desc
+    return cm.Species(sa_genotypes[z,:], desc, fit)
 
 # map-elites algorithm (CVT variant)
 def compute(dim_map, dim_x, f,
@@ -83,9 +93,20 @@ def compute(dim_map, dim_x, f,
        Format of the logfile: evals archive_size max mean median 5%_percentile, 95%_percentile
 
     """
+
+    # setup the shared arrays as globals
+    sa_genotypes_base = multiprocessing.Array(ctypes.c_double, dim_x * params["batch_size"])
+    sa_genotypes = np.frombuffer(sa_genotypes_base.get_obj())
+    sa_genotypes = sa_genotypes.reshape(params["batch_size"], dim_x)
+    sa_genotypes[0,0] = 42
+
+    sa_results = multiprocessing.Array(ctypes.c_double, (dim_map + 1) * params["batch_size"])
+    sa_results = np.frombuffer(sa_results.get_obj())
+    sa_results = sa_results.reshape(params["batch_size"], (dim_map + 1))
+
     # setup the parallel processing pool
     num_cores = multiprocessing.cpu_count()
-    pool = multiprocessing.Pool(num_cores)
+    pool = multiprocessing.Pool(num_cores, initializer=initpool,initargs=(sa_genotypes,sa_results))
 
     # create the CVT
     c = cm.cvt(n_niches, dim_map,
@@ -100,11 +121,13 @@ def compute(dim_map, dim_x, f,
     # main loop
     while (n_evals < max_evals):
         to_evaluate = []
+        k = 0
         # random initialization
         if len(archive) <= params['random_init'] * n_niches:
             for i in range(0, params['random_init_batch']):
                 x = np.random.uniform(low=params['min'], high=params['max'], size=dim_x)
-                to_evaluate += [(x, f)]
+                to_evaluate += [(k, f)] # z,f
+                k += 1
         else:  # variation/selection loop
             keys = list(archive.keys())
             # we select all the parents at the same time because randint is slow
@@ -116,7 +139,8 @@ def compute(dim_map, dim_x, f,
                 y = archive[keys[rand2[n]]]
                 # copy & add variation
                 z = variation_operator(x.x, y.x, params)
-                to_evaluate += [(z, f)]
+                to_evaluate += [(k, f)] #z,f
+                k += 1                
         # evaluation of the fitness for to_evaluate
         s_list = cm.parallel_eval(__evaluate, to_evaluate, pool, params)
         # natural selection

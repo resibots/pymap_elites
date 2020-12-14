@@ -201,7 +201,7 @@ def cvt(k, dim, samples, cvt_use_cache=True):
 def make_hashable(array):
     return tuple(map(float, array))
 
-
+# we should use https://stackoverflow.com/questions/5549190/is-shared-readonly-data-copied-to-different-processes-for-multiprocessing/5550156#5550156
 def parallel_eval(evaluate_function, to_evaluate, pool, params):
     if params['parallel'] == True:
         s_list = pool.map(evaluate_function, to_evaluate)
