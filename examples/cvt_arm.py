@@ -17,9 +17,13 @@ def arm(angles):
     ef, _ = a.fw_kinematics(command)
     f = -np.std(command) # fitness
     desc = ef / 2. + 0.5 # descriptor (position) in [0, 1]
+    inter = a.collides([0.25, 0.5], 0.2)
+    if (len(inter) != 0):
+        f -= 1e3
     return f, desc
 
 
-px = cm_map_elites.default_params.copy()
 
-archive = cvt_map_elites.compute(2, 5, arm, n_niches=10000, max_evals=1e6, log_file=open('cvt_arm.dat', 'w'), params=px)
+if __name__ == '__main__':
+    px = cm_map_elites.default_params.copy()
+    archive = cvt_map_elites.compute(2, 5, arm, n_niches=10000, max_evals=1e6, log_file=open('cvt_arm.dat', 'w'), params=px)
