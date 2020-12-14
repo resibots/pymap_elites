@@ -17,7 +17,7 @@ def arm(angles):
     ef, _ = a.fw_kinematics(command)
     f = -np.std(command) # fitness
     desc = ef / 2. + 0.5 # descriptor (position) in [0, 1]
-    inter = a.collides([0.25, 0.5], 0.2)
+    inter = a.collides([0, 0.5], 0.2) # constraint
     if (len(inter) != 0):
         f -= 1e3
     return f, desc
