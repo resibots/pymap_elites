@@ -78,7 +78,7 @@ def __evaluate(t):
     fit, desc = f(sa_genotypes[z,:])
     sa_results[z,0] = fit
     sa_results[z,1:1 + len(desc)] = desc
-    return cm.Species(sa_genotypes[z,:], desc, fit)
+    #return cm.Species(sa_genotypes[z,:], desc, fit)
 
 # map-elites algorithm (CVT variant)
 def compute(dim_map, dim_x, f,
@@ -98,7 +98,6 @@ def compute(dim_map, dim_x, f,
     sa_genotypes_base = multiprocessing.Array(ctypes.c_double, dim_x * params["batch_size"])
     sa_genotypes = np.frombuffer(sa_genotypes_base.get_obj())
     sa_genotypes = sa_genotypes.reshape(params["batch_size"], dim_x)
-    sa_genotypes[0,0] = 42
 
     sa_results = multiprocessing.Array(ctypes.c_double, (dim_map + 1) * params["batch_size"])
     sa_results = np.frombuffer(sa_results.get_obj())
@@ -142,7 +141,11 @@ def compute(dim_map, dim_x, f,
                 to_evaluate += [(k, f)] #z,f
                 k += 1                
         # evaluation of the fitness for to_evaluate
-        s_list = cm.parallel_eval(__evaluate, to_evaluate, pool, params)
+        cm.parallel_eval(__evaluate, to_evaluate, pool, params)
+        s_list = []
+        for i in range(0, sa_results.shape[0]):
+            s_list += [cm.Species(sa_genotypes[i,:], sa_results[i,1:1+dim_map], sa_results[i, 0])]
+            
         # natural selection
         for s in s_list:
             __add_to_archive(s, s.desc, archive, kdt)
