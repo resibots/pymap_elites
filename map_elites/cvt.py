@@ -126,6 +126,7 @@ def compute(dim_map, dim_x, f,
             for i in range(0, params['random_init_batch']):
                 x = np.random.uniform(low=params['min'], high=params['max'], size=dim_x)
                 to_evaluate += [(k, f)] # z,f
+                sa_genotypes[k, :] = x
                 k += 1
         else:  # variation/selection loop
             keys = list(archive.keys())
@@ -139,6 +140,7 @@ def compute(dim_map, dim_x, f,
                 # copy & add variation
                 z = variation_operator(x.x, y.x, params)
                 to_evaluate += [(k, f)] #z,f
+                sa_genotypes[k, :] = z
                 k += 1                
         # evaluation of the fitness for to_evaluate
         cm.parallel_eval(__evaluate, to_evaluate, pool, params)
