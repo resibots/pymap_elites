@@ -74,10 +74,12 @@ def initpool(a1, a2):
 # t = vector, function
 def __evaluate(t):
     global sa_genotypes
+    global sa_results
     z, f = t  # evaluate z with function f
     fit, desc = f(sa_genotypes[z,:])
     sa_results[z,0] = fit
     sa_results[z,1:1 + len(desc)] = desc
+    print("worker", sa_genotypes[z, :])
     #return cm.Species(sa_genotypes[z,:], desc, fit)
 
 # map-elites algorithm (CVT variant)
@@ -88,11 +90,13 @@ def compute(dim_map, dim_x, f,
             log_file=None,
             variation_operator=cm.variation):
     """CVT MAP-Elites
-       Vassiliades V, Chatzilygeroudis K, Mouret JB. Using centroidal voronoi tessellations to scale up the multidimensional archive of phenotypic elites algorithm. IEEE Transactions on Evolutionary Computation. 2017 Aug 3;22(4):623-30.
+       Vassiliades V, Chatziglygeroudis K, Mouret JB. Using centroidal voronoi tessellations to scale up the multidimensional archive of phenotypic elites algorithm. IEEE Transactions on Evolutionary Computation. 2017 Aug 3;22(4):623-30.
 
        Format of the logfile: evals archive_size max mean median 5%_percentile, 95%_percentile
 
     """
+    global sa_genotypes
+    global sa_results
 
     # setup the shared arrays as globals
     sa_genotypes_base = multiprocessing.Array(ctypes.c_double, dim_x * params["batch_size"])
@@ -146,6 +150,7 @@ def compute(dim_map, dim_x, f,
         cm.parallel_eval(__evaluate, to_evaluate, pool, params)
         s_list = []
         for i in range(0, sa_results.shape[0]):
+            print(sa_results[i,:])
             s_list += [cm.Species(sa_genotypes[i,:], sa_results[i,1:1+dim_map], sa_results[i, 0])]
             
         # natural selection
